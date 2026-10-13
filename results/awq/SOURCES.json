@@ -1,0 +1,11 @@
+{
+  "archive_filename": "minivllm-complete-20261011-191600-fb0e8e.zip",
+  "archive_sha256": "3b7257b940b8b13fdfc23c04a3ba310dd581a96b16b996e8cd787de820698d1e",
+  "record_sha256": {
+    "minivllm-complete-20261011-191600-fb0e8e/results/awq-comparison.json": "d3412a5dd5a7e0687220a294606d37481faab67cbe801df2bcc73258575c6752",
+    "minivllm-complete-20261011-191600-fb0e8e/results/awq-baseline-details.json": "7e0654ee7447db1aa1c83f2bba255c312fddea9502ced835cd1d19cacb961f2a",
+    "minivllm-complete-20261011-191600-fb0e8e/results/awq-awq-details.json": "05fcb90b06f9b6c7e198e58e1bfe387bd695dbc71b44f2ba18ed90dc1c45e090",
+    "minivllm-complete-20261011-191600-fb0e8e/results/awq-source.json": "bc209856552bfc125306230308feaf8c32d3cc1768fd967a260f6fc1ceb5dfb0"
+  },
+  "note": "完整历史归档由项目持有者本地保留；公开仓库仅发布精选指标。"
+}

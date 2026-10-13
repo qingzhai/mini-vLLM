@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "selected_summary": true,
+  "model": {
+    "repo_id": "Qwen/Qwen3-8B-AWQ",
+    "revision": "4da05a8edb55c6046cce958586c33b61da07bb79"
+  },
+  "configuration": {
+    "gpu": "NVIDIA A100-PCIE-40GB",
+    "quantization": "AWQ W4A16 GEMM group128",
+    "core_dtype": "float16",
+    "lm_head_dtype": "float32",
+    "extra_fp32_head_bytes": 2489319424,
+    "kv_pages": 64,
+    "kv_bytes": 2415919104,
+    "graph": false,
+    "prefix": false,
+    "chunk": false,
+    "repetitions": 3,
+    "aggregation": "各指标三轮中位数"
+  },
+  "storage": {
+    "fp16_weight_bytes": 16381470720,
+    "awq_weight_bytes": 6098479104,
+    "weight_reduction_pct": 62.772,
+    "fp16_weights_plus_head_bytes": 18870790144,
+    "awq_weights_plus_head_bytes": 8587798528,
+    "weights_plus_head_reduction_pct": 54.492,
+    "common_kv_bytes": 2415919104,
+    "quantization_quality_evaluated": false
+  },
+  "rows": [
+    {
+      "case": "short-b1",
+      "batch": 1,
+      "prompt_tokens": 35,
+      "output_tokens_per_request": 32,
+      "repetitions": 3,
+      "fp16_total_s": 2.6423,
+      "awq_total_s": 9.3323,
+      "fp16_tokens_per_s": 12.1108,
+      "awq_tokens_per_s": 3.429,
+      "throughput_ratio_awq_vs_fp16": 0.2831,
+      "fp16_peak_allocated_gib": 19.8733,
+      "awq_peak_allocated_gib": 10.3141
+    },
+    {
+      "case": "short-b4",
+      "batch": 4,
+      "prompt_tokens": 35,
+      "output_tokens_per_request": 32,
+      "repetitions": 3,
+      "fp16_total_s": 2.7234,
+      "awq_total_s": 10.5448,
+      "fp16_tokens_per_s": 47.0006,
+      "awq_tokens_per_s": 12.1387,
+      "throughput_ratio_awq_vs_fp16": 0.2583,
+      "fp16_peak_allocated_gib": 19.884,
+      "awq_peak_allocated_gib": 10.3248
+    },
+    {
+      "case": "long-b1",
+      "batch": 1,
+      "prompt_tokens": 530,
+      "output_tokens_per_request": 32,
+      "repetitions": 3,
+      "fp16_total_s": 2.5536,
+      "awq_total_s": 17.7847,
+      "fp16_tokens_per_s": 12.5313,
+      "awq_tokens_per_s": 1.7993,
+      "throughput_ratio_awq_vs_fp16": 0.1436,
+      "fp16_peak_allocated_gib": 19.9224,
+      "awq_peak_allocated_gib": 10.3632
+    },
+    {
+      "case": "long-b4",
+      "batch": 4,
+      "prompt_tokens": 530,
+      "output_tokens_per_request": 32,
+      "repetitions": 3,
+      "fp16_total_s": 2.7923,
+      "awq_total_s": 35.8972,
+      "fp16_tokens_per_s": 45.8399,
+      "awq_tokens_per_s": 3.5657,
+      "throughput_ratio_awq_vs_fp16": 0.0778,
+      "fp16_peak_allocated_gib": 20.0276,
+      "awq_peak_allocated_gib": 10.4691
+    }
+  ],
+  "validation": {
+    "consumed_checkpoint_tensors": 903,
+    "unconsumed_checkpoint_tensors": 0,
+    "quantized_fused_modules": 144,
+    "operator_reference_checks_passed": 6,
+    "scope": "Packed-linear reference checks, finite generation, page release; not a model quality benchmark"
+  },
+  "limitations": [
+    "官方预量化 checkpoint 加载与推理，不代表自行完成 AWQ 校准。",
+    "没有模型任务质量评测或与 FP16 完整生成一致的承诺。",
+    "本实现更慢，不能写成量化加速。",
+    "62.772% 是权重和量化元数据存储减少；含额外 FP32 LM Head 后为 54.492%，不是整机显存比例。"
+  ]
+}

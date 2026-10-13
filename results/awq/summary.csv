@@ -1,0 +1,5 @@
+case,batch,prompt_tokens,output_tokens_per_request,repetitions,fp16_total_s,awq_total_s,fp16_tokens_per_s,awq_tokens_per_s,throughput_ratio_awq_vs_fp16,fp16_peak_allocated_gib,awq_peak_allocated_gib
+short-b1,1,35,32,3,2.6423,9.3323,12.1108,3.429,0.2831,19.8733,10.3141
+short-b4,4,35,32,3,2.7234,10.5448,47.0006,12.1387,0.2583,19.884,10.3248
+long-b1,1,530,32,3,2.5536,17.7847,12.5313,1.7993,0.1436,19.9224,10.3632
+long-b4,4,530,32,3,2.7923,35.8972,45.8399,3.5657,0.0778,20.0276,10.4691

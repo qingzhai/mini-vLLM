@@ -1,0 +1,13 @@
+{
+  "archive_filename": "dp-pd-v1-20261013-012922Z-5m60zc-records.zip",
+  "archive_sha256": "f8ec3b1801ca6b4b6e1e325b91f3859e47a6097ab4d4dff4c272245b663a9781",
+  "record_sha256": {
+    "dp-pd-v1-20261013-012922Z-5m60zc/summary.json": "58f3e62fabac3eea5adc6e215492e9c62872ac05c11fca15d90775064c50a63b",
+    "dp-pd-v1-20261013-012922Z-5m60zc/config.json": "a4b4d797ff1a069c798f4490d873450eafb27066b1a636faca5c9f517e87ec71",
+    "dp-pd-v1-20261013-012922Z-5m60zc/single-details.json": "4049c74bf9d0ab2f7fb0c3df2c517cec50ba1bde29367a6c1e55237cb3b847b3",
+    "dp-pd-v1-20261013-012922Z-5m60zc/tp2-details.json": "053c66dace919bd6dc3eeea008a6abb48e34907dca338bd2b164b76580d81256",
+    "dp-pd-v1-20261013-012922Z-5m60zc/dp2-details.json": "2a2a317ceb5d215c59ed71413846f9e0f0c62da02f3fe29266df4b8e69572187",
+    "dp-pd-v1-20261013-012922Z-5m60zc/pd-details.json": "eb1e9456328a67f69ac3500765d6b1e68da070b8ed1b5f0049a3c90bd738352d"
+  },
+  "note": "原始 records ZIP 由项目持有者本地保留；公开仓库只提供精选指标，不包含完整 token、prompt、trace 或机器连接信息。"
+}

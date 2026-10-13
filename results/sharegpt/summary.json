@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "selected_summary": true,
+  "configuration": {
+    "model": "Qwen/Qwen3-8B",
+    "hardware": "单 A100-PCIE-40GB",
+    "dtype": "BF16 主干 + FP32 LM Head",
+    "attention": "所有阶段 per-query PagedAttention；纯 Decode 使用 CUDA Graph",
+    "fixed_arithmetic": true,
+    "dataset": {
+      "repo_id": "heka-ai/sharegpt-english-10k-vllm-serving-benchmark",
+      "revision": "854a6eb3c310f07f9e8b269a735bf6fe547e543d"
+    },
+    "requests": 100,
+    "unique_prompts": 80,
+    "controlled_prompt_replays": 20,
+    "short_requests": 50,
+    "short_prompt_tokens": [
+      256,
+      512
+    ],
+    "long_requests": 50,
+    "long_prompt_tokens": [
+      1024,
+      1536
+    ],
+    "arrival": "100 请求同时入队",
+    "max_resident_requests": 8,
+    "output_tokens_per_request": 64,
+    "sampling": "greedy",
+    "ignore_eos": true,
+    "kv_pages": 330,
+    "page_tokens": 256,
+    "repetitions": 1,
+    "metric_scope": "进程内引擎；TTFT/E2E 包含排队，不含 HTTP、网络、分词、模型加载。"
+  },
+  "rows": [
+    {
+      "mode": "full_prefill",
+      "requests": 100,
+      "output_tokens": 6400,
+      "total_s": 132.3973902007565,
+      "output_tokens_per_s": 48.33932141936912,
+      "avg_prompt_tokens": 788.89,
+      "avg_ttft_ms": 64675.098954243585,
+      "p95_ttft_ms": 123775.59374435805,
+      "avg_tpot_ms": 83.13424455105431,
+      "avg_e2e_ms": 69912.55636096,
+      "peak_active_requests": 8,
+      "peak_allocated_gib": 29.489662170410156,
+      "partial_prefill_chunks": 0,
+      "mixed_steps": 0,
+      "processed_tokens": 85189,
+      "cache_hit_tokens": 0,
+      "cache_hit_prompt_token_fraction": 0.0,
+      "cache_evictions": 0,
+      "all_pages_released": true,
+      "finite_logits": true
+    },
+    {
+      "mode": "chunked",
+      "requests": 100,
+      "output_tokens": 6400,
+      "total_s": 146.5389696015045,
+      "output_tokens_per_s": 43.674389259075916,
+      "avg_prompt_tokens": 788.89,
+      "avg_ttft_ms": 72091.19177780114,
+      "p95_ttft_ms": 136764.0653202776,
+      "avg_tpot_ms": 131.1812100563908,
+      "avg_e2e_ms": 80355.60801135376,
+      "peak_active_requests": 8,
+      "peak_allocated_gib": 29.491127490997314,
+      "partial_prefill_chunks": 267,
+      "mixed_steps": 188,
+      "processed_tokens": 85189,
+      "cache_hit_tokens": 0,
+      "cache_hit_prompt_token_fraction": 0.0,
+      "cache_evictions": 0,
+      "all_pages_released": true,
+      "finite_logits": true
+    },
+    {
+      "mode": "chunked_prefix",
+      "requests": 100,
+      "output_tokens": 6400,
+      "total_s": 121.88129914551973,
+      "output_tokens_per_s": 52.51010651239238,
+      "avg_prompt_tokens": 788.89,
+      "avg_ttft_ms": 68249.78541447781,
+      "p95_ttft_ms": 118251.10463867895,
+      "avg_tpot_ms": 109.26714755668645,
+      "avg_e2e_ms": 75133.61571054906,
+      "peak_active_requests": 8,
+      "peak_allocated_gib": 29.491127490997314,
+      "partial_prefill_chunks": 214,
+      "mixed_steps": 158,
+      "processed_tokens": 71621,
+      "cache_hit_tokens": 13568,
+      "cache_hit_prompt_token_fraction": 0.1719884901570561,
+      "cache_evictions": 0,
+      "all_pages_released": true,
+      "finite_logits": true
+    }
+  ],
+  "validation": {
+    "all_cross_mode_sequences_match": true,
+    "requests_per_mode": 100,
+    "output_tokens_per_mode": 6400,
+    "all_pages_released": true,
+    "all_finite_logits": true
+  },
+  "limitations": [
+    "20% 为受控重复请求比例，不是数据集天然共享前缀比例；实际输入 token 复用率为 17.20%。",
+    "正式测量每模式一次；没有运行间误差区间。",
+    "Chunk+Prefix 对 Chunk 吞吐 +20.23%；对 full Prefill +8.63%，但平均 TTFT/E2E 更差。",
+    "原 Flash Prefill 路径没有因本次参考配置通过而被验证修复。"
+  ]
+}

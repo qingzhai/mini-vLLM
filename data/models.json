@@ -1,0 +1,46 @@
+{
+  "historical_base_revision_recorded": false,
+  "models": {
+    "Qwen3-8B": {
+      "repo_id": "Qwen/Qwen3-8B",
+      "revision": null,
+      "metadata_sha256": {
+        "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+        "config.json": "f7c4eadfbbf522470667b797a3c89be2524832d2d599797248dc304fff447c30",
+        "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+        "generation_config.json": "2325da0f15bb848e018c5ae071b7943332e9f871d6b60e2ed22ca97d4cb993d2",
+        "vocab.json": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+      }
+    },
+    "Qwen3-0.6B": {
+      "repo_id": "Qwen/Qwen3-0.6B",
+      "revision": null,
+      "metadata_sha256": {
+        "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+        "config.json": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+        "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+        "generation_config.json": "2325da0f15bb848e018c5ae071b7943332e9f871d6b60e2ed22ca97d4cb993d2",
+        "vocab.json": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+      }
+    },
+    "Qwen3-8B-AWQ": {
+      "repo_id": "Qwen/Qwen3-8B-AWQ",
+      "revision": "4da05a8edb55c6046cce958586c33b61da07bb79",
+      "metadata_sha256": {
+        "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+        "config.json": "7457674d8044143cd4159e47deecf28fd6698a9826569094b60d7bead8f351ee",
+        "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+        "generation_config.json": "2325da0f15bb848e018c5ae071b7943332e9f871d6b60e2ed22ca97d4cb993d2",
+        "vocab.json": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+      }
+    },
+    "Qwen3-8B-DFlash-b16": {
+      "repo_id": "z-lab/Qwen3-8B-DFlash-b16",
+      "revision": "9b41424b7109f9c5413454f481b09a82b85333f4",
+      "metadata_sha256": {
+        "config.json": "9834d608c9ca53d5548b415471ae9e8ebc9aab6cedfc2a7af95b6bd097373102"
+      },
+      "modeling_dflash_sha256": "d2b61a1fa5d469830c2285b552d75773274943fae5ac66dc2713beddea338528"
+    }
+  }
+}

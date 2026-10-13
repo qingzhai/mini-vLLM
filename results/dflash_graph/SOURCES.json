@@ -1,0 +1,10 @@
+{
+  "archive_filename": "dflash-graph-v1-20261013-020541Z-pqep0y-records.zip",
+  "archive_sha256": "3917134a1f94d48367c6127399495d2a099979e702181d86155e5629cc26bf1d",
+  "record_sha256": {
+    "dflash-graph-v1-20261013-020541Z-pqep0y/summary.json": "1522130e6d60f6d86700fd517043df9dd97a33ded03f363b81280a024ab3cac7",
+    "dflash-graph-v1-20261013-020541Z-pqep0y/details.json": "947c89f1658718ecbc591c9980cba73acc3139bddb2d5702487ffcc284ed6dbe",
+    "dflash-graph-v1-20261013-020541Z-pqep0y/config.json": "006e82b1467c39a84fbc5f8298d7b74c9ab779c4d61f28bd603202908573478a"
+  },
+  "note": "原始 records ZIP 由项目持有者本地保留；公开仓库只提供精选指标，不包含完整 token、prompt、trace 或机器连接信息。"
+}

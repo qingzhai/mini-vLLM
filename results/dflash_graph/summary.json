@@ -1,0 +1,308 @@
+{
+  "schema_version": 1,
+  "selected_summary": true,
+  "environment": {
+    "torch": "2.9.1+cu128",
+    "cuda": "12.8",
+    "gpu": "NVIDIA A100-PCIE-40GB",
+    "device_total_gib": 39.4935302734375
+  },
+  "model": "Qwen/Qwen3-8B",
+  "draft": {
+    "repo_id": "z-lab/Qwen3-8B-DFlash-b16",
+    "revision": "9b41424b7109f9c5413454f481b09a82b85333f4",
+    "code_sha256": "d2b61a1fa5d469830c2285b552d75773274943fae5ac66dc2713beddea338528"
+  },
+  "configuration": {
+    "modes": [
+      "ar_eager",
+      "ar_graph",
+      "dflash_eager",
+      "dflash_graph"
+    ],
+    "output_tokens": 256,
+    "repetitions": 3,
+    "max_batch": 2,
+    "kv_pages": 64,
+    "core_dtype": "float16",
+    "head_dtype": "float32",
+    "draft_dtype": "bfloat16",
+    "target_graph_only": true,
+    "draft_graph": false,
+    "sampling": "greedy",
+    "ignore_eos": true,
+    "initial_prefill_graph": false,
+    "target_attention": "per-query PagedAttention for every query",
+    "fixed_linear_rows": 32,
+    "fixed_rms_rows": {
+      "head_dim": 1024,
+      "hidden_dim": 32
+    },
+    "target_features_in_all_modes": true,
+    "all_four_graphs_and_draft_resident_in_all_modes": true,
+    "formal_finite_logit_diagnostics": false,
+    "source_manifest_sha256": "b064d73c46bc91eb8c311ce4920741ab46c17ac0bcbe7696a5b079afcb991f99"
+  },
+  "workload": {
+    "type": "固定提示词；非 ShareGPT",
+    "cases": [
+      {
+        "case": "single-code",
+        "requests": 1,
+        "input_tokens": [
+          31
+        ],
+        "max_batch": 1
+      },
+      {
+        "case": "batch2-requests3",
+        "requests": 3,
+        "input_tokens": [
+          31,
+          36,
+          248
+        ],
+        "max_batch": 2
+      }
+    ]
+  },
+  "measurement": {
+    "repetitions": 3,
+    "aggregation": "median",
+    "includes": [
+      "初始 Prefill",
+      "Target/Draft 前向",
+      "CPU 调度和元数据",
+      "输出读取",
+      "排队",
+      "接受判定和回滚"
+    ],
+    "excludes": [
+      "模型加载",
+      "Graph 捕获",
+      "预热",
+      "诊断"
+    ]
+  },
+  "validation": {
+    "formal_runs": 24,
+    "request_executions": 48,
+    "output_tokens_checked": 12288,
+    "all_tokens_match": true,
+    "exact_forward_probes": 8,
+    "graph_fallbacks": 0,
+    "all_pages_released": true
+  },
+  "capture": {
+    "total_s": 3.5333956770045916,
+    "allocated_delta_bytes": 81144832,
+    "keys": [
+      "b1-q1",
+      "b1-q16",
+      "b2-q1",
+      "b2-q16"
+    ]
+  },
+  "rows": [
+    {
+      "case": "single-code",
+      "mode": "ar_eager",
+      "repetitions": 3,
+      "requests": 1,
+      "output_tokens": 256,
+      "median_total_s": 25.415700140001718,
+      "median_output_tokens_per_s": 10.072514177844038,
+      "median_avg_ttft_s": 0.0997659209970152,
+      "median_avg_e2e_s": 25.415328446993954,
+      "median_avg_tpot_ms": 99.2767157882233,
+      "max_peak_allocated_gib": 21.97490644454956,
+      "all_pages_released": true,
+      "all_correct": true,
+      "graph_replays": [
+        0,
+        0,
+        0
+      ],
+      "total_s_min": 25.0283070650039,
+      "total_s_max": 25.602685093006585,
+      "throughput_ratio_vs_ar_eager": 1.0,
+      "throughput_ratio_vs_ar_graph": 0.21692001733680535
+    },
+    {
+      "case": "single-code",
+      "mode": "ar_graph",
+      "repetitions": 3,
+      "requests": 1,
+      "output_tokens": 256,
+      "median_total_s": 5.513174114996218,
+      "median_output_tokens_per_s": 46.434230927636065,
+      "median_avg_ttft_s": 0.10105386699433438,
+      "median_avg_e2e_s": 5.51308189300471,
+      "median_avg_tpot_ms": 21.22258795687801,
+      "max_peak_allocated_gib": 21.97490644454956,
+      "all_pages_released": true,
+      "all_correct": true,
+      "graph_replays": [
+        255,
+        255,
+        255
+      ],
+      "total_s_min": 5.473832058996777,
+      "total_s_max": 5.518431208998663,
+      "throughput_ratio_vs_ar_eager": 4.609994099564031,
+      "throughput_ratio_vs_ar_graph": 1.0
+    },
+    {
+      "case": "single-code",
+      "mode": "dflash_eager",
+      "repetitions": 3,
+      "requests": 1,
+      "output_tokens": 256,
+      "median_total_s": 5.372065284987912,
+      "median_output_tokens_per_s": 47.65392570998438,
+      "median_avg_ttft_s": 0.10188356599246617,
+      "median_avg_e2e_s": 5.371883783998783,
+      "median_avg_tpot_ms": 20.666628768644753,
+      "max_peak_allocated_gib": 21.979729652404785,
+      "all_pages_released": true,
+      "all_correct": true,
+      "graph_replays": [
+        0,
+        0,
+        0
+      ],
+      "total_s_min": 5.320781861999421,
+      "total_s_max": 5.478129116992932,
+      "throughput_ratio_vs_ar_eager": 4.731085493511255,
+      "throughput_ratio_vs_ar_graph": 1.0262671472743699
+    },
+    {
+      "case": "single-code",
+      "mode": "dflash_graph",
+      "repetitions": 3,
+      "requests": 1,
+      "output_tokens": 256,
+      "median_total_s": 1.845704047998879,
+      "median_output_tokens_per_s": 138.7004597392287,
+      "median_avg_ttft_s": 0.10029781000048388,
+      "median_avg_e2e_s": 1.845618988998467,
+      "median_avg_tpot_ms": 6.84320593724146,
+      "max_peak_allocated_gib": 21.978761672973633,
+      "all_pages_released": true,
+      "all_correct": true,
+      "graph_replays": [
+        45,
+        45,
+        45
+      ],
+      "total_s_min": 1.8373620240017772,
+      "total_s_max": 1.846406462995219,
+      "throughput_ratio_vs_ar_eager": 13.770192554736788,
+      "throughput_ratio_vs_ar_graph": 2.9870304077046517,
+      "throughput_ratio_vs_dflash_eager": 2.910577831160055
+    },
+    {
+      "case": "batch2-requests3",
+      "mode": "ar_eager",
+      "repetitions": 3,
+      "requests": 3,
+      "output_tokens": 768,
+      "median_total_s": 51.342895061010495,
+      "median_output_tokens_per_s": 14.958252725861866,
+      "median_avg_ttft_s": 8.903338579669557,
+      "median_avg_e2e_s": 34.35917540233155,
+      "median_avg_tpot_ms": 99.82681106926273,
+      "max_peak_allocated_gib": 22.264151573181152,
+      "all_pages_released": true,
+      "all_correct": true,
+      "graph_replays": [
+        0,
+        0,
+        0
+      ],
+      "total_s_min": 51.335576466997736,
+      "total_s_max": 51.95251037800335,
+      "throughput_ratio_vs_ar_eager": 1.0,
+      "throughput_ratio_vs_ar_graph": 0.22695684211329553
+    },
+    {
+      "case": "batch2-requests3",
+      "mode": "ar_graph",
+      "repetitions": 3,
+      "requests": 3,
+      "output_tokens": 768,
+      "median_total_s": 11.65262132800126,
+      "median_output_tokens_per_s": 65.9079170584987,
+      "median_avg_ttft_s": 2.1849182109969356,
+      "median_avg_e2e_s": 7.694974163993417,
+      "median_avg_tpot_ms": 21.599662569948787,
+      "max_peak_allocated_gib": 22.264151573181152,
+      "all_pages_released": true,
+      "all_correct": true,
+      "graph_replays": [
+        510,
+        510,
+        510
+      ],
+      "total_s_min": 11.622569380997447,
+      "total_s_max": 11.657821525004692,
+      "throughput_ratio_vs_ar_eager": 4.406124048469118,
+      "throughput_ratio_vs_ar_graph": 1.0
+    },
+    {
+      "case": "batch2-requests3",
+      "mode": "dflash_eager",
+      "repetitions": 3,
+      "requests": 3,
+      "output_tokens": 768,
+      "median_total_s": 18.762995765006053,
+      "median_output_tokens_per_s": 40.931629981623686,
+      "median_avg_ttft_s": 2.358556689340427,
+      "median_avg_e2e_s": 12.50805044467173,
+      "median_avg_tpot_ms": 39.80193629541687,
+      "max_peak_allocated_gib": 22.274287223815918,
+      "all_pages_released": true,
+      "all_correct": true,
+      "graph_replays": [
+        0,
+        0,
+        0
+      ],
+      "total_s_min": 18.73266461599269,
+      "total_s_max": 18.87395084799209,
+      "throughput_ratio_vs_ar_eager": 2.7363911234669476,
+      "throughput_ratio_vs_ar_graph": 0.6210426881689115
+    },
+    {
+      "case": "batch2-requests3",
+      "mode": "dflash_graph",
+      "repetitions": 3,
+      "requests": 3,
+      "output_tokens": 768,
+      "median_total_s": 7.650733525995747,
+      "median_output_tokens_per_s": 100.38253160830672,
+      "median_avg_ttft_s": 1.176062002996332,
+      "median_avg_e2e_s": 5.301761833329995,
+      "median_avg_tpot_ms": 16.179215020916327,
+      "max_peak_allocated_gib": 22.273966789245605,
+      "all_pages_released": true,
+      "all_correct": true,
+      "graph_replays": [
+        142,
+        142,
+        142
+      ],
+      "total_s_min": 7.633824970995192,
+      "total_s_max": 7.753150509000989,
+      "throughput_ratio_vs_ar_eager": 6.710846075942527,
+      "throughput_ratio_vs_ar_graph": 1.523072433304317,
+      "throughput_ratio_vs_dflash_eager": 2.452444030530267
+    }
+  ],
+  "limitations": [
+    "仅 Target 前向进入 Graph；Draft、初始 Prefill 和接受/回滚在图外。",
+    "所有模式驻留 Draft 和四张图；不能用峰值比较独立部署最低显存。",
+    "同一固定计算形状、per-query PagedAttention 执行器的对照，不代表对生产引擎的加速比。",
+    "没有与 AWQ、TP、DP、1P1D、Prefix 或 Chunk 联合验证。"
+  ]
+}

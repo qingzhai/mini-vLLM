@@ -1,0 +1,11 @@
+{
+  "archive_filename": "sharegpt-final-v1-20261011-185805-Q49afh-records.zip",
+  "archive_sha256": "87c425b3a80d2016c5b98e8d86b72c541d065980a2c0abe631d57c459e8d8f5b",
+  "record_sha256": {
+    "sharegpt-final-v1-20261011-185805-Q49afh/report.json": "3646e58f8ff55866a458f33cccbcf6d861e16f863413caa87aa052941ed02413",
+    "sharegpt-final-v1-20261011-185805-Q49afh/round1-full_prefill.json": "0c6b7e0fffb5e27f87660225d6f6e980410359640c6eec75300309b9fc1cb342",
+    "sharegpt-final-v1-20261011-185805-Q49afh/round1-chunked.json": "3592b01c6f63cce572f9fe9e80e0bc5e79d7b0ef243618119ec08e1bb2275960",
+    "sharegpt-final-v1-20261011-185805-Q49afh/round1-chunked_prefix.json": "014d1777f7d93fea4324143b757248dbbd6aa4b676abfcd897f06d399680fb92"
+  },
+  "note": "原始 records ZIP 由项目持有者本地保留；公开仓库只提供精选指标，不包含完整 token、prompt、trace 或机器连接信息。"
+}
