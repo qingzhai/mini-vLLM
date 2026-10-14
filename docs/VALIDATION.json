@@ -29,7 +29,7 @@
     }
   ],
   "unique_unittest_cases": 19,
-  "original_core_python_files_unchanged": 27,
+  "original_core_python_files_unchanged": 25,
   "unchanged_original_files_guarded": 39,
   "regenerated_source_snapshot_verified": true,
   "source_snapshot_contains_readme": true,

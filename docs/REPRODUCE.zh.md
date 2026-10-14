@@ -66,4 +66,4 @@ python scripts/check_cpu.py --transport
 
 检查内容包括原始核心与共享算术字节一致、源码摘要防篡改、ShareGPT 参考输出和 runtime guard、调度/页所有权、CPU KV pack/remap、Graph 静态元数据与输出所有权、实际投机状态机的接受/拒绝/回滚合约。Graph 测试在 CPU 上模拟捕获与回放，不会执行真正 CUDA Graph。传输测试使用 localhost TCP；GPU NCCL 迁移仍以归档 GPU 记录及实际重跑为准。
 
-本次发布主要变更为目录合并、参数化路径、启动和归档流程，核心 27 个 Python 源文件与归档一致。整理没有重新租卡运行；GPU 性能数字对应历史 records ZIP 内源码。若修改算法、模型精度、采样、缓存或形状，需要重新做对应 GPU 正确性检查后再比较性能。
+本次发布主要变更为目录合并、参数化路径、启动和归档流程，核心 25 个 Python 源文件与归档一致。整理没有重新租卡运行；GPU 性能数字对应历史 records ZIP 内源码。若修改算法、模型精度、采样、缓存或形状，需要重新做对应 GPU 正确性检查后再比较性能。
