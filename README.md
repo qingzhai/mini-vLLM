@@ -2,7 +2,7 @@
 
 基于 [MinivLLM](https://github.com/Wenyueh/MinivLLM) 的 Qwen3 推理引擎复现与优化项目，覆盖分页 KV Cache、Prefix/LRU、Chunked Prefill、DFlash 投机解码、CUDA Graph，以及 TP2、DP2、单机 1P1D 实验。
 
-代码围绕一份核心引擎组织，各实验保留独立配置和入口。主要运行验证使用 A100-PCIE-40GB，模型为 Qwen3-0.6B/8B；所有性能结论都限定相应负载和比较对象。
+代码围绕一份核心引擎组织，各实验保留独立配置和入口。主要优化与性能评测使用 A100-PCIE-40GB 和 Qwen3-8B；Qwen3-0.6B 用于早期基础推理、前缀缓存及分块调度的功能检查，未完成与 8B 同等范围的性能评测。所有性能结论都限定相应负载和比较对象。
 
 ## 从这里开始学习
 

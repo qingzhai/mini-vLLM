@@ -1,6 +1,6 @@
 # 2026.10　轻量级大模型推理引擎复现与优化
 
-**项目概述：** 基于开源 MinivLLM 扩展 Qwen3-0.6B/8B 推理流程，围绕 Prefill/Decode、分页 KV Cache 和请求调度实现与验证优化；集成 Prefix Caching、Chunked Prefill、DFlash 批量投机解码与 Target CUDA Graph，并完成单机双卡 TP/DP/1P1D 对照。技术栈：Python、PyTorch、Triton、CUDA Graph、NCCL、AWQ。
+**项目概述：** 基于开源 MinivLLM，面向 Qwen3-8B 优化 KV Cache 管理与请求调度，集成 Prefix Caching、Chunked Prefill、DFlash 批量投机解码与 Target CUDA Graph，并完成单卡及 TP2/DP2/1P1D 对照评测。技术栈：Python、PyTorch、Triton、CUDA Graph、NCCL、AWQ。
 
 **推理与缓存调度：** 完成模型加载、分页 KV 管理、链式块哈希前缀匹配与 LRU 驱逐，支持 Chunked Prefill 与 P/D 混合连续批处理；验证部分 Prefill 不采样、共享前缀复用、请求补位与 KV 页回收。建立固定版本 ShareGPT 派生 100 请求评测，三种调度输出逐 token 一致；同一 Chunk 配置开启 Prefix 后，单次吞吐由 **43.67 提升至 52.51 tokens/s（+20.2%）**，复用 **13,568** 个输入 tokens。
 
