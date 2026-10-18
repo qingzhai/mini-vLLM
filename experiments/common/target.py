@@ -174,58 +174,107 @@ class Target:
         self.counters = dict(prefill_calls=0, decode_calls=0, prefill_query_tokens=0,
                              decode_query_tokens=0, transfer_send_bytes=0, transfer_recv_bytes=0)
 
+    # 将该调用设为无梯度推理
     @torch.inference_mode()
+    # 执行当前模块前向
     def forward(self, seqs, prefill):
+        # 导入 set_context, reset_context 所需接口
         from myvllm.utils import set_context, reset_context
+        # 设置展平输入、KV 写入槽位、各 Query 的页表、各 Query 的有效长度、Query 累计偏移、历史累计偏移
         ids, slots, tables, lengths, cuq, cuk = [], [], [], [], [0], [0]
+        # 逐个处理请求
         for seq in seqs:
+            # 设置 Token 序列、KV 页数量或页表
             tokens, pages = seq['token_ids'], seq['block_table']
+            # 设置窗口或分片起点、窗口或分片终点
             start, end = (0, len(tokens)) if prefill else (len(tokens)-1, len(tokens))
+            # Query 窗口与页表宽度必须在受控配置范围内
             assert 0 <= start < end <= 2048 and 0 < len(pages) <= 8
+            # 写入与读取必须落在当前分配的有效页范围内
             assert all(0 <= p < self.pages for p in pages) and end <= len(pages)*256
+            # 向展平输入追加本次内容
             ids.extend(tokens[start:end])
+            # 向Query 累计偏移追加本次内容
             cuq.append(cuq[-1] + end-start)
+            # 向历史累计偏移追加本次内容
             cuk.append(cuk[-1] + end)
+            # 逐个处理绝对 Token 位置
             for position in range(start, end):
+                # 向各 Query 的页表追加本次内容
                 tables.append(pages + [-1]*(8-len(pages)))
+                # 每行只允许读取到自身位置，保持 Target 因果性
                 lengths.append(position+1)
+                # 向KV 写入槽位追加本次内容
                 slots.append(pages[position//256]*256 + position % 256)
+        # 把元数据转换成指定设备张量
         def tensor(data, dtype):
+            # 返回指定类型的元数据张量
             return torch.tensor(data, dtype=dtype, device=self.device)
+        # 把本轮 KV 地址与有效长度传给模型
         set_context(is_prefill=prefill,
+            # Prefill 才需要提供各请求 Query 边界
             cu_seqlens_q=tensor(cuq, torch.int32) if prefill else None,
+            # Prefill 才需要提供各请求历史边界
             cu_seqlens_k=tensor(cuk, torch.int32) if prefill else None,
+            # 记录本轮最长 Query
             max_seqlen_q=max(b-a for a,b in zip(cuq,cuq[1:])),
+            # 记录最大因果长度和逐 Token KV 写入槽
             max_seqlen_k=max(lengths), slot_mapping=tensor(slots, torch.long),
+            # 指定有效历史长度
             context_lens=tensor(lengths, torch.int32), block_tables=tensor(tables, torch.int32))
+        # 执行操作并确保后续清理
         try:
+            # 设置词表分数
             logits = self.model.compute_logits(self.model(tensor(ids, torch.long)))
+            # 此入口仅返回每请求最后一个位置的词表分数
             assert logits.shape == (len(seqs), self.hc.vocab_size)
+            # 检查张量没有 NaN 或无穷值
             assert logits.dtype == torch.float32 and torch.isfinite(logits).all().item(), 'Non-finite logits'
+            # 设置请求编号或图形状
             key = 'prefill' if prefill else 'decode'
+            # 更新分阶段执行计数
             self.counters[key+'_calls'] += 1
+            # 更新分阶段执行计数
             self.counters[key+'_query_tokens'] += len(ids)
+            # 返回完整词表的预测分数
             return logits
+        # 无论成功或异常都执行清理
         finally:
+            # 清除本次全局前向元数据，避免影响后续调用
             reset_context()
 
+    # 把逻辑 Token 位置转换成物理槽位
     def slots(self, pages, length):
+        # 逻辑读取长度必须能被已有页表容纳
         assert 0 < length <= len(pages)*256
+        # 返回指定类型的元数据张量
         return torch.tensor([pages[i//256]*256+i%256 for i in range(length)],
+                            # 用整型槽位在当前 GPU 上执行索引
                             dtype=torch.long, device=self.device)
 
+    # 把页和页内偏移展平成槽位维度
     def flat_cache(self):
+        # 返回共享存储的槽位视图
         return self.cache.view(2, self.hc.num_hidden_layers, self.pages*256,
+                               # 补充把页和页内偏移展平成槽位维度的字段
                                self.hc.num_key_value_heads//self.tp, self.hc.head_dim)
 
+    # 按逻辑次序打包全层 Prompt KV
     def pack(self, pages, length):
+        # 这里仅迁移完整副本的 KV，不支持 TP 分片迁移
         assert self.tp == 1
+        # 按源页表取出全层有效 Prompt KV，排成连续传输张量
         return self.flat_cache().index_select(2, self.slots(pages, length)).contiguous()
 
+    # 按目的页表写入迁移的全层 KV
     def unpack(self, packed, pages, length):
+        # 这里仅迁移完整副本的 KV，不支持 TP 分片迁移
         assert self.tp == 1
+        # 检查张量形状与本轮数据一致
         assert packed.shape == (2, self.hc.num_hidden_layers, length,
+                                # 校验迁移张量的 KV Head 与 Head Dim
                                 self.hc.num_key_value_heads, self.hc.head_dim)
+        # 按目的页表重映射写入，目的物理页号可与源不同
         self.flat_cache().index_copy_(2, self.slots(pages, length), packed)
 
     def stats(self, rank):

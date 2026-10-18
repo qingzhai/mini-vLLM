@@ -19,7 +19,8 @@ class ReleaseTests(unittest.TestCase):
         records = json.loads((ROOT/'data/original-source-sha256.json').read_text())
         for name, expected in records.items():
             with self.subTest(source=name):
-                self.assertEqual(hashlib.sha256((ROOT/name).read_bytes()).hexdigest(), expected)
+                original = repro.source_before_annotations(ROOT/name)
+                self.assertEqual(hashlib.sha256(original).hexdigest(), expected)
 
     def test_reference_output_and_runtime_guards(self):
         selected = json.loads((ROOT/'data/sharegpt-selection.json').read_text())

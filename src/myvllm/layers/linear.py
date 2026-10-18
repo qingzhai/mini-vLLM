@@ -81,48 +81,78 @@ class ReplicatedLinear(LinearBase):
 # compute the starting index of the column split
 # compute the dim size of the full parameter
 # copy the parameter slice to the local parameter
+# 沿输出特征切分权重，各卡产生不同输出分片
 class ColumnParallelLinear(LinearBase):
+    # 初始化当前对象的状态
     def __init__(
+        # 接收当前实例
         self, 
+        # 接收完整输入特征宽度
         input_size: int, 
+        # 接收完整输出特征宽度
         output_size: int,
+        # 配置是否带偏置
         bias: bool = True,
+    # 结束构造函数参数
     ):
+        # 设置模型并行组大小
         tp_size = dist.get_world_size()
+        # 输出宽度必须能被模型并行卡数整除
         assert output_size % tp_size == 0, "Output size must be divisible by tensor parallel size."
+        # 初始化当前对象的状态
         super().__init__(input_size, output_size//tp_size, bias, tp_dim=0)
 
     # param: parameter after tensor parallelism
     # loaded_weights: the original full parameter to be loaded into param
+    # 从完整权重中装入本卡分片
     def weight_loader(self, param: nn.Parameter, loaded_weights: torch.Tensor):
+        # 设置本卡参数存储
         param_data = param.data 
         # full_dim on the output column
+        # 设置完整输出维度
         full_data_output_size = loaded_weights.size(0)
         # dim size after sharding
+        # 设置本卡分片宽度
         shard_size = full_data_output_size // self.tp_size
+        # 本卡参数输出宽度必须与分片大小一致
         assert shard_size == param_data.size(0), "Shard size does not match parameter size."
         # starting index
+        # 设置本卡分片起点
         start_index = self.tp_rank * shard_size
+        # Column Parallel 沿输出维取本卡权重
         slided_weight = loaded_weights.narrow(0, start_index, shard_size)
+        # 将新内容写入现有张量存储
         param_data.copy_(slided_weight)
 
+    # 执行当前模块前向
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # 返回本次计算结果
         return nn.functional.linear(x, self.weight, self.bias)
 
 # an extension of ColumnParallelLinear by merging several matrices
+# 分别切分多个投影，再合并本卡的各段输出
 class MergedColumnParallelLinear(ColumnParallelLinear):
+    # 初始化当前对象的状态
     def __init__(
+        # 接收当前实例
         self, 
+        # 接收完整输入特征宽度
         input_size: int, 
+        # 分别给出每个合并投影的输出宽度
         output_sizes: list[int], # e.g. merge QKV matrices to compute MM together and then split
+        # 配置是否带偏置
         bias: bool = True,
+    # 结束构造函数参数
     ):
+        # 设置各合并投影的输出宽度
         self.output_sizes = output_sizes
+        # 初始化当前对象的状态
         super().__init__(input_size, sum(output_sizes), bias)
 
     # param: parameter to be reloaded after tensor parallelism
     # loaded_weights: the original full parameter to be loaded into param
     # the index of merged matrices (e.g. it's 0 for Q, 1 for K, 2 for V assuming QKV are merged together)
+    # 从完整权重中装入本卡分片
     def weight_loader(self, param: nn.Parameter, loaded_weights: torch.Tensor, loaded_weight_id: int):
         """
         checkpoint = {
@@ -136,93 +166,158 @@ class MergedColumnParallelLinear(ColumnParallelLinear):
             output_sizes=sum([4096, 4096, 4096]),  # Q, K, V
         ) which is also sharded by tp_size
         """
+        # 设置本卡参数存储
         param_data = param.data
         # compute offset 
+        # 设置合并张量中的分片偏移
         offset = sum(self.output_sizes[:loaded_weight_id]) // self.tp_size
         # compute size
+        # 设置本卡分片宽度
         shard_size = self.output_sizes[loaded_weight_id] // self.tp_size
         # find the correct slice to be loaded in the sharded parameter
+        # 设置本卡参数存储
         param_data = param_data.narrow(0, offset, shard_size)
         # shard the original full weight
+        # 定位此投影中属于本卡的输出起点
         loaded_weights_start_index = self.tp_rank * shard_size
+        # 提取当前投影的本卡权重切片
         shard_weights = loaded_weights.narrow(0, loaded_weights_start_index, shard_size)
+        # 将新内容写入现有张量存储
         param_data.copy_(shard_weights)
 
 
+# 按 Query 与 KV 的各自 Head 数分配本卡输出
 class QKVColumnParallelLinear(ColumnParallelLinear):
+    # 初始化当前对象的状态
     def __init__(
+        # 接收当前实例
         self,
+        # 接收完整输入特征宽度
         input_size: int,
+        # 指定每个 Head 的维度
         head_size: int,
+        # 指定完整 Query Head 数
         num_heads: int,
+        # 可选指定 KV Head 总数
         num_kv_heads: int | None = None,
+        # 配置是否带偏置
         bias: bool = False,
+    # 结束构造函数参数
     ):
+        # 设置模型并行组大小
         self.tp_size = dist.get_world_size()
+        # 设置 KV Head 总数
         num_kv_heads = num_kv_heads or num_heads
+        # 设置每个 Head 的宽度
         self.head_size = head_size
+        # 每卡仅保留自己负责的 Query Heads
         self.num_heads = num_heads // self.tp_size
+        # 每卡仅保留自己负责的 KV Heads
         self.num_kv_heads = num_kv_heads // self.tp_size
         # Calculate per-GPU output size
+        # 计算本卡合并 QKV 投影的输出宽度
         self.output_size = head_size * (self.num_heads + 2 * self.num_kv_heads)
         # Pass TOTAL output size to parent (it will divide by tp_size)
+        # 设置完整 QKV 宽度
         total_output_size = head_size * (num_heads + 2 * num_kv_heads)
+        # 初始化当前对象的状态
         super().__init__(input_size, total_output_size, bias=bias)
 
     # load_weight_id: q, k, v
+    # 从完整权重中装入本卡分片
     def weight_loader(self, param: nn.Parameter, loaded_weights: torch.Tensor, load_weight_id: str):
         # batch_size * num_heads * num_token * head_size
+        # 设置本卡参数存储
         param_data = param.data
         # loaded_weights: batch_size * num_token * (head_size*num_heads)
+        # 只接受 Q、K、V 三种权重来源
         assert load_weight_id in ['q', 'k', 'v'], "load_weight_id must be one of 'q', 'k', 'v'"
         # compute offset
+        # Q 分片位于合并张量最前段
         if load_weight_id == 'q':
+            # 设置合并张量中的分片偏移
             offset = 0
+            # 设置本卡分片宽度
             shard_size = self.head_size * self.num_heads
+        # K 分片紧接本卡的全部 Q Heads
         elif load_weight_id == 'k':
+            # 设置合并张量中的分片偏移
             offset = self.head_size * self.num_heads
+            # 设置本卡分片宽度
             shard_size = self.head_size * self.num_kv_heads
+        # V 分片位于本卡 Q 和 K 之后
         elif load_weight_id == 'v':
+            # 设置合并张量中的分片偏移
             offset = self.head_size * self.num_heads + self.head_size * self.num_kv_heads
+            # 设置本卡分片宽度
             shard_size = self.head_size * self.num_kv_heads
+        # 处理上述条件不成立的情况
         else:
+            # 状态不满足要求时立即报错
             raise ValueError(f"Unknown load_weight_id: {load_weight_id}")
 
+        # 设置本卡参数存储
         param_data = param_data.narrow(0, offset, shard_size)
         # shard the original full weight
+        # 定位当前 Q/K/V 分支的本卡 Head 切片
         loaded_weights_start_index = self.tp_rank * shard_size
+        # 装入该分支对应的本卡权重
         shard_weights = loaded_weights.narrow(0, loaded_weights_start_index, shard_size)
 
+        # 将新内容写入现有张量存储
         param_data.copy_(shard_weights)
 
 
+# 沿输入特征切分，输出部分和再跨卡归约
 class RowParallelLinear(LinearBase):
+    # 初始化当前对象的状态
     def __init__(
+        # 接收当前实例
         self,
+        # 接收完整输入特征宽度
         input_size: int,
+        # 接收完整输出特征宽度
         output_size: int,
+        # 配置是否带偏置
         bias: bool = True,
+    # 结束构造函数参数
     ):
+        # 设置模型并行组大小
         tp_size = dist.get_world_size()
+        # 输入宽度必须能被模型并行卡数整除
         assert input_size % tp_size == 0, "Input size must be divisible by tensor parallel size."
+        # 初始化当前对象的状态
         super().__init__(input_size // tp_size, output_size, bias, tp_dim=1)
 
+    # 从完整权重中装入本卡分片
     def weight_loader(self, param: nn.Parameter, loaded_weights: torch.Tensor):
+        # 设置本卡参数存储
         param_data = param.data 
         # full_dim on the input row
+        # 设置完整输入维度
         full_data_input_size = loaded_weights.size(1)
         # dim size after sharding
+        # 设置本卡分片宽度
         shard_size = full_data_input_size // self.tp_size
+        # 本卡参数输入宽度必须与输入分片一致
         assert shard_size == param_data.size(1), "Shard size does not match parameter size."
         # starting index
+        # 设置本卡分片起点
         start_index = self.tp_rank * shard_size
+        # Row Parallel 沿输入维取本卡权重
         slided_weight = loaded_weights.narrow(1, start_index, shard_size)
+        # 将新内容写入现有张量存储
         param_data.copy_(slided_weight)
 
+    # 执行当前模块前向
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # 设置本轮执行结果
         result = nn.functional.linear(x, self.weight, self.bias)
+        # 模型被分片到多卡时汇合各卡结果
         if self.tp_size > 1:
+            # 将各卡输入分片的部分结果求和并分发
             dist.all_reduce(result, op=dist.ReduceOp.SUM)
+        # 返回本轮执行结果
         return result
 
 

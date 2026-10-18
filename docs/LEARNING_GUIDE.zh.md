@@ -11,6 +11,33 @@
 
 整体证据见 [项目总结](PROJECT_SUMMARY.zh.md)，实际启动入口见 [scripts/run.py](../scripts/run.py#L25)。
 
+## 第一次阅读按这个顺序
+
+先看 [README 的请求流程](../README.md)，然后按下表读函数。**第一遍只读前六项，能手推状态变化后，再看多卡和量化。** 不必先读模型初始化、进程启动、权重下载或 Benchmark 的报表代码；第一次也不需要启动 GPU。
+
+| 顺序 | 打开的源码与函数 | 读完要能回答 |
+|---|---|---|
+| 1 | [sequence.py](../src/myvllm/engine/sequence.py) 的 `Sequence`；[llm_engine.py](../src/myvllm/engine/llm_engine.py) 的 `add_prompt()`、`step()`、`generate()` | Prompt 长度为何固定？输出追加在哪？谁决定继续或结束？ |
+| 2 | [block_manager.py](../src/myvllm/engine/block_manager.py) 的 `allocate()`、`mark_computed()`、`deallocate()`，再回头读 `_cached_prefix()`；[scheduler.py](../src/myvllm/engine/scheduler.py) 的 `schedule()`、`postprocess()` | 逻辑页对应哪张物理页？何时能共享？归还引用为何不等于清空内容？ |
+| 3 | [chunk_scheduler.py](../src/myvllm/engine/chunk_scheduler.py) 的 `schedule()`；[chunk_runtime.py](../src/myvllm/engine/chunk_runtime.py) 的两个执行函数；[model_runner.py](../src/myvllm/engine/model_runner.py) 的 `prepare_prefill()`、`prepare_decode()`、`run()` | 本轮算哪些 Token？KV 写哪里？哪些请求允许采样？ |
+| 4 | [qwen3.py](../src/myvllm/models/qwen3.py) 的各层 `forward()` 与 `compute_logits()` | ID 如何变成特征，再得到下一 Token 的词表分数？KV 在 Attention 的哪一环使用？ |
+| 5 | [state.py](../experiments/dflash_graph/state.py) 的 `Request`、`Window`、`accept_prefix()`、`commit()`；[dflash_runtime.py](../experiments/dflash_graph/dflash_runtime.py) 的 `generate()`、`propose()` | Pending 与候选如何对齐？接受后哪些输出、KV、特征有效？拒绝后哪些页归还？ |
+| 6 | [graph_runtime.py](../experiments/dflash_graph/graph_runtime.py) 的 `target_forward()`；[graph_executor.py](../experiments/dflash_graph/graph_executor.py) 的 `build_query_metadata()`、`_fill()`、`capture_all()`、`run()` | 固定的是地址还是 Token？四类元数据怎样更新？为何返回值必须 clone？ |
+| 7 | [distributed/runtime.py](../experiments/distributed/runtime.py) 的 `run_load()`，先读内部 `admit()`、`schedule()`、`receive()`；[worker.py](../experiments/distributed/worker.py) 的 `main()`；[target.py](../experiments/common/target.py) 的 `forward()`、`pack()`、`unpack()` | DP 请求归哪卡？1P1D 何时传 KV？D 怎样按自己的物理页读取它？ |
+| 8 | [linear.py](../src/myvllm/layers/linear.py) 的四种 Parallel Linear；[awq_loader.py](../experiments/awq/awq_loader.py) 的 `load_awq_model()`；[awq_linear.py](../experiments/awq/awq_linear.py) 的 `forward()`、`_gemm()` | TP 切哪一维，何时通信？INT4 怎样变为参与矩阵乘的权重？ |
+
+上表这 18 个文件的核心部分已在代码行上一行加了简短中文注释。其中请求状态、块管理、调度、DFlash/Graph 和 AWQ 的小文件逐行覆盖；引擎、ModelRunner、Qwen、多卡控制器及共享 Target 则覆盖表中要读的关键函数，不要求先通读整个文件。空行、已有注释和多行字符串正文不额外插入注释。
+
+每读一个函数，先做三件事：找输入，找被修改的状态，再找返回值。遇到模型或 CUDA 调用，第一遍先把它看成“接收哪些张量、写哪些 KV、返回哪些特征”，不要立刻跳进所有底层实现。
+
+建议在纸上连续手推下面三段，确认自己理解了调用顺序：
+
+1. Prompt `[10,20,30]` 经 Prefill 预测 40：序列长度为 4，有效 KV 只有前三个位置；下一轮输入 40 才写它自己的 KV。
+2. Pending=P、候选 A/B/C、Target 后继预测 A/B/X/Y：新增输出 A/B/X，保留 KV P/A/B，X 留作下一轮 Pending。完整推演见 [面试问答第 12 题](INTERVIEW.zh.md)。
+3. 页长 256、页表 `[4,9]`：逻辑位置 255 写 slot 1279，位置 256 写 slot 2304。换成 Graph 后地址缓冲不变，这些数值仍须每轮更新。
+
+读完前六项后，再用 [项目总结](PROJECT_SUMMARY.zh.md) 对照性能数字，用 [面试材料](INTERVIEW.zh.md) 练口述。不要从结果中的加速倍数反推自己已经理解实现。
+
 ## 三条路径要分清
 
 | 路径 | 调用关系 | 管理什么 | 使用场景与边界 |
@@ -19,7 +46,7 @@
 | DFlash＋Target Graph | benchmark → `GraphDFlashRuntime.generate` → `DFlashRuntime.generate` → `TargetGraphExecutor.run` | 独立 `Request`、`PagePool`、Draft cache、验证窗口 | 绕过普通 `engine.step`，独占 Target/KV；Graph 只覆盖 Target 前向，不组合 Prefix/Chunk/TP |
 | 分布式实验 | benchmark → `Session`/`run_load` → torchrun worker → 公共 `Target.forward` | 控制器请求队列、各 worker 页表、在途任务和 KV handoff | 同一控制器比较 Single/TP2/DP2/1P1D；本轮关闭 Graph/DFlash/AWQ/Prefix/Chunk |
 
-源码入口：[普通引擎](../src/myvllm/engine/llm_engine.py#L82)、[Graph 适配器](../experiments/dflash_graph/graph_runtime.py#L8)、[分布式控制器](../experiments/distributed/runtime.py#L171)。公共 [Target](../experiments/common/target.py#L124) 是 Qwen3-8B、FP16 主干＋FP32 Head 的受控执行器，不能当成所有模型通用的服务 API。
+源码入口：[普通引擎](../src/myvllm/engine/llm_engine.py#L83)、[Graph 适配器](../experiments/dflash_graph/graph_runtime.py#L13)、[分布式控制器](../experiments/distributed/runtime.py#L172)。公共 [Target](../experiments/common/target.py#L124) 是 Qwen3-8B、FP16 主干＋FP32 Head 的受控执行器，不能当成所有模型通用的服务 API。
 
 普通引擎示意：
 
@@ -41,7 +68,7 @@ prompt → tokenizer → Sequence → waiting
 
 ### 1. 跟踪一个请求的一生
 
-读 [LLMEngine.add_prompt/generate/step](../src/myvllm/engine/llm_engine.py#L109)、[Sequence](../src/myvllm/engine/sequence.py#L14)、[Scheduler.schedule/postprocess](../src/myvllm/engine/scheduler.py#L35)，最后看 [Qwen3Attention.forward](../src/myvllm/models/qwen3.py#L73) 和 [compute_logits](../src/myvllm/models/qwen3.py#L343)。
+读 [LLMEngine.add_prompt/generate/step](../src/myvllm/engine/llm_engine.py#L127)、[Sequence](../src/myvllm/engine/sequence.py#L24)、[Scheduler.schedule/postprocess](../src/myvllm/engine/scheduler.py#L59)，最后看 [Qwen3Attention.forward](../src/myvllm/models/qwen3.py#L74) 和 [compute_logits](../src/myvllm/models/qwen3.py#L405)。
 
 读后应能解释：输入如何入队，本轮是谁挑出的，`num_prompt_tokens` 与生成长度有何区别，为什么模型前向和调度器是两个角色，完成条件如何触发页归还。
 
@@ -51,7 +78,7 @@ prompt → tokenizer → Sequence → waiting
 
 ### 2. 先弄清 KV 地址，再看 Prefix/LRU
 
-读 [BlockManager.compute_hash/_cached_prefix/allocate/mark_computed/deallocate](../src/myvllm/engine/block_manager.py#L26)、[prepare_prefill](../src/myvllm/engine/model_runner.py#L270)、[store_kvcache](../src/myvllm/layers/attention.py#L67) 和 [paged_attention_decode](../src/myvllm/layers/attention.py#L397)。
+读 [BlockManager.compute_hash/_cached_prefix/allocate/mark_computed/deallocate](../src/myvllm/engine/block_manager.py#L45)、[prepare_prefill](../src/myvllm/engine/model_runner.py#L271)、[store_kvcache](../src/myvllm/layers/attention.py#L67) 和 [paged_attention_decode](../src/myvllm/layers/attention.py#L397)。
 
 读后应能手算：逻辑位置 `p` 对应 `block_table[p // block_size] * block_size + p % block_size`；页表把逻辑连续序列映射到不连续物理页。KV 字节数按 `2 × 层数 × tokens × KV heads × head_dim × dtype字节` 计算；Qwen3-8B FP16 的 1024 tokens KV 为 144 MiB。
 
@@ -61,7 +88,7 @@ Prefix 哈希包含上一块哈希和本块 token；命中还检查 token 内容
 
 ### 3. 理解 Chunk 为什么不能“每块都采样”
 
-读 [ChunkScheduler.schedule](../src/myvllm/engine/chunk_scheduler.py#L25)、[run_chunked/chunked_step](../src/myvllm/engine/chunk_runtime.py#L7)，对照 [prepare_prefill](../src/myvllm/engine/model_runner.py#L270)。
+读 [ChunkScheduler.schedule](../src/myvllm/engine/chunk_scheduler.py#L45)、[run_chunked/chunked_step](../src/myvllm/engine/chunk_runtime.py#L11)，对照 [prepare_prefill](../src/myvllm/engine/model_runner.py#L271)。
 
 读后应能解释：`_scheduled_start/end` 是本轮窗口；Prefill 还没处理完时，只更新 KV 和 `num_computed_tokens`，不追加输出 token。只有最后一个 Prefill 块和 Decode 请求进入采样列表。部分 Prefill 返回 `-1` 占位，调度层断言不会误采样；`mark_computed(..., end)` 只发布真正写完的整页。
 
@@ -81,19 +108,19 @@ Prefix 哈希包含上一块哈希和本块 token；命中还检查 token 内容
 
 ### 5. 用一个 4-token 小例子讲清投机接受与回滚
 
-先读纯 Python 的 [Request/Window/accept_prefix/commit](../experiments/dflash_graph/state.py#L33)，再读 [DFlashRuntime.propose/generate](../experiments/dflash_graph/dflash_runtime.py#L81)。
+先读纯 Python 的 [Request/Window/accept_prefix/commit](../experiments/dflash_graph/state.py#L63)，再读 [DFlashRuntime.propose/generate](../experiments/dflash_graph/dflash_runtime.py#L148)。
 
 关键不变量是 `len(req.tokens) == req.computed + 1`：末尾保留一个已知但尚未写入 Target KV 的 token。Draft 的 16-token block 包含它和 15 个候选；Target 一次因果前向给出逐位置预测。`block[1:]` 与 `posterior[:-1]` 从头比较，到首个不一致处停止，接受连续前缀，再追加对应 Target token。
 
 读后应能解释：为什么首 token 由初始 Target Prefill 得到；为什么收集 DFlash 特征时用层输出的 `x + residual`；为什么每个请求有自己的 Draft cache；为什么 Draft 在本版本逐请求执行，Target 验证则打包一个 batch。
 
-小练习：待计算 token 为 10，`block=[10,20,30,40]`、`posterior=[20,99,88,77]`。手算只接受 20，再追加 99，推进 2；说明被拒绝的后续 KV 即使物理内存里还在，也必须由逻辑长度屏蔽。跟踪 [PagePool.trim](../experiments/dflash_graph/state.py#L20) 只归还超出需要的整页，和下一轮 Draft cache/特征长度如何衔接。
+小练习：待计算 token 为 10，`block=[10,20,30,40]`、`posterior=[20,99,88,77]`。手算只接受 20，再追加 99，推进 2；说明被拒绝的后续 KV 即使物理内存里还在，也必须由逻辑长度屏蔽。跟踪 [PagePool.trim](../experiments/dflash_graph/state.py#L38) 只归还超出需要的整页，和下一轮 Draft cache/特征长度如何衔接。
 
 本实现验收 greedy 固定输出；没有实现随机采样的概率修正，也没有与 Prefix/Chunk/TP 的联合调度。
 
 ### 6. 看懂 Graph 的“不变”和“每轮都变”
 
-读 [TargetGraphExecutor.build_query_metadata](../experiments/dflash_graph/graph_executor.py#L25)、[_fill/_forward/capture_all/run](../experiments/dflash_graph/graph_executor.py#L117)，以及 [GraphDFlashRuntime.target_forward](../experiments/dflash_graph/graph_runtime.py#L27)。
+读 [TargetGraphExecutor.build_query_metadata](../experiments/dflash_graph/graph_executor.py#L33)、[_fill/_forward/capture_all/run](../experiments/dflash_graph/graph_executor.py#L198)，以及 [GraphDFlashRuntime.target_forward](../experiments/dflash_graph/graph_runtime.py#L47)。
 
 不变的是捕获图用到的 tensor 地址、形状和计算结构；变化的是这些缓冲区中的 token IDs、slot mapping、context lengths、block tables。每次 replay 前四类输入全部更新。捕获 batch 1/2 × query 1/16 四张图；初始 Prefill 图外，其他形状可以 eager fallback，正式受控负载要求验证前向 fallback=0。
 
@@ -105,7 +132,7 @@ Prefix 哈希包含上一块哈希和本块 token；命中还检查 token 内容
 
 ### 7. 把 TP、DP 和实际 KV 迁移对应到代码
 
-读 [ModelGroup/Target](../experiments/common/target.py#L24)、[严格分片加载](../experiments/common/tp_support.py#L8)、[Session/run_load](../experiments/distributed/runtime.py#L20)、[worker 的 send_kv/recv_kv](../experiments/distributed/worker.py#L110) 和 [Target.pack/unpack](../experiments/common/target.py#L221)。量化作为补充看 [AWQLinear/_gemm](../experiments/awq/awq_linear.py#L14)。
+读 [ModelGroup/Target](../experiments/common/target.py#L24)、[严格分片加载](../experiments/common/tp_support.py#L8)、[Session/run_load](../experiments/distributed/runtime.py#L20)、[worker 的 send_kv/recv_kv](../experiments/distributed/worker.py#L172) 和 [Target.pack/unpack](../experiments/common/target.py#L263)。量化作为补充看 [AWQLinear/_gemm](../experiments/awq/awq_linear.py#L20)。
 
 读后应能解释：TP 是一个模型跨两卡做分片计算；DP 是两个完整副本各接请求；本项目 1P1D 两卡也各有完整权重，P 做 Prefill、D 做 Decode，需要迁移全部 prompt KV。DP/PD 的模型组为单 rank，防止完整副本误用 WORLD 被分片；KV 传输仍走 WORLD。
 
@@ -120,5 +147,7 @@ Prefix 哈希包含上一块哈希和本块 token；命中还检查 token 内容
 建议完成三个可展示动作：手推一次跨页投机回滚；在源码指出每轮更新的四类 Graph 输入；用一个统一结果表同时讲清吞吐提升、显存下降和没有提升的实验。能讲清这三件事，比背功能名更接近实习面试要求。
 
 若要动手改代码，在临时分支或副本中做上面的练习。仓库源码 manifest 会检测改动；确认改动后使用 [update_manifest.py](../scripts/update_manifest.py) 更新。CPU 检查入口是 `python scripts/check_cpu.py`；安装 CPU PyTorch 后可加 `--tensor`，本地 RPC 检查可加 `--transport`。这些不等同重新完成 GPU 验证，具体启动参数见 [复现说明](REPRODUCE.zh.md)。
+
+本轮增加的是阅读注释，没有重新执行 GPU Benchmark。历史实验的原始 SHA256 不改写：[source-annotations.json](../data/source-annotations.json) 记录新增注释的行号，校验器仅移除这些注释后恢复原文件，再与原始哈希比较；当前文件仍由发布 Manifest 校验。任意原代码行被修改时仍会失败。阅读注释不代表性能或正确性新增了一轮 GPU 验收。
 
 继续练口头表达可看 [面试问答与讲述稿](INTERVIEW.zh.md)。

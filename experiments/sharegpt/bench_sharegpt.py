@@ -24,14 +24,15 @@ def save_json(path, obj):
 
 
 def check_source(repo):
+    from repro import source_before_annotations
     expected = json.loads((Path(__file__).parent / 'server-source-sha256.json').read_text())
     actual = {}
     for name, digest in expected.items():
         path = repo / name
-        got = hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None
+        got = hashlib.sha256(source_before_annotations(path)).hexdigest() if path.is_file() else None
         if got != digest:
             raise RuntimeError(f'Server source changed: {name}; preserve the changes and send the new source')
-        actual[name] = got
+        actual[name] = hashlib.sha256(path.read_bytes()).hexdigest()
     return actual
 
 
