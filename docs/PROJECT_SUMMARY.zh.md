@@ -1,6 +1,8 @@
 # Qwen3 推理引擎复现与优化：项目总结
 
-项目时间：2026.10。基于 [Wenyueh/MinivLLM](https://github.com/Wenyueh/MinivLLM) 扩展和整理，使用官方 Qwen3、AWQ checkpoint 与 DFlash Draft；本项目聚焦推理执行、调度及实验验证。所有性能数字来自已完成的 GPU 运行记录，本次整理没有重新执行 GPU 实验。
+项目时间：2026.10。基于 [Wenyueh/MinivLLM](https://github.com/Wenyueh/MinivLLM) 扩展和整理，使用官方 Qwen3、AWQ checkpoint，以及 EAGLE-3、DFlash、DSpark Draft；Draft 均非本项目训练。除原 DFlash＋Graph 自定义运行时外，新增 `LegacyTarget` 将 Mini-vLLM Qwen3-8B 接入官方 DeepSpec 循环，在统一 Target Eager 下完成方法对照与 DSpark 推理消融。所有性能数字来自已完成的 GPU 运行记录，本次整理没有重新执行 GPU 实验。
+
+贡献边界：上游已有模型、算子、Paged KV Cache 与基础 Continuous Batching；本项目在此基础上扩展完整页 Prefix/LRU、Chunk 混合调度、自定义 DFlash 接受/回滚与 Target Graph，并实现多卡实验控制器和 AWQ 适配。新三方法对照保留官方 Draft 提议、验证和接受函数体，由本项目适配 Target 前向、特征、分页 KV 接口及实验协议，不是独立研发或训练新的投机算法。具体调用边界见 [LegacyTarget](../experiments/speculative_compare/legacy_target.py)、[benchmark.worker()/_worker()](../experiments/speculative_compare/benchmark.py) 与[来源声明](../THIRD_PARTY_NOTICES.md)。
 
 ## 1. 完成范围
 
@@ -37,7 +39,7 @@ TTFT 是从入队至首 token，E2E 是入队至完成，均包含引擎排队�
 
 ## 3. DFlash 与 CUDA Graph 四项对照
 
-单 A100。single-code 为 1 请求，batch2-requests3 为 3 请求且驻留上限 2；每请求 greedy 生成 256 tokens、忽略 EOS。使用固定提示词，不是 ShareGPT。各模式三轮，顺序旋转；所有模式驻留相同 Draft 和四张图，也统一采集 Target 的五层特征。
+单 A100。single-code 为 1 请求，batch2-requests3 为 3 请求且驻留上限 2；每请求 greedy 生成 256 tokens、忽略 EOS。使用官方 z-lab b16 Draft，15 个候选＋Pending，验证 Q=16，支持多请求 Target 合批。使用固定提示词，不是 ShareGPT。各模式三轮，顺序旋转；所有模式驻留相同 Draft 和四张图，也统一采集 Target 的五层特征。
 
 | 模式 | 单请求总耗时 s | 单请求 tokens/s | 三请求总耗时 s | 三请求总 tokens/s |
 |---|---:|---:|---:|---:|
@@ -130,7 +132,7 @@ TP2 的主要结果是分摊每卡内存，峰值约 20.08→10.10 GiB；本轮�
 
 ## 7. EAGLE3 / DFlash / DSpark 方法对照与消融
 
-单 A100 40GB，原 Mini-vLLM Target 适配到官方 DeepSpec 的提议、验证和接受循环；GSM8K / HumanEval / MT-Bench 各四条固定输入，共十二条，每条实际生成 256 Token、忽略 EOS、三轮。平均输入 120.33 Token，Batch=1，无 Graph。相同 Draft 在其 AR 基线中保持驻留。
+单 A100 40GB，`LegacyTarget` 将原 Mini-vLLM Qwen3-8B 适配到官方 DeepSpec 的提议、验证和接受循环；官方 EAGLE-3/DFlash/DSpark 每轮最多 7 个候选＋Pending，与第 3 节的 z-lab b16 路径不同。GSM8K / HumanEval / MT-Bench 各四条固定输入，共十二条，每条实际生成 256 Token、忽略 EOS、三轮。平均输入 120.33 Token，Batch=1，Target Eager，无 Graph。相同 Draft 在其 AR 基线中保持驻留；固定形状补行和逐 Query Attention 有计算成本，此 AR 是受控参考配置，不是生产最优 AR。
 
 | 方法 | 完整生成 tokens/s 中位数 | 相对配对 AR Eager | 逐 Token 一致 |
 |---|---:|---:|---:|
@@ -142,11 +144,23 @@ TP2 的主要结果是分摊每卡内存，峰值约 20.08→10.10 GiB；本轮�
 | DSpark Confidence 0.5 | 61.839 | 3.823× | 36/36 |
 | DSpark Confidence 0.8 | 51.741 | 3.193× | 36/36 |
 
-全部 360 次执行、92,160 输出 Token 完成，252 次投机请求均与配对 AR 完整一致；跨进程、跨轮 AR 一致，Target 页均回收。速度包含 Prefill 与完整生成，不是纯 Decode 或 ShareGPT 并发吞吐。不同 Draft 训练和容量不匹配，不宣称严格结构消融。
+Fixed 吞吐中位数 63.225 tokens/s 略高于 Markov Only 的 63.180，Markov Only 的配对加速比中位数 3.898× 则略高于 Fixed 的 3.894×。吞吐取各模式三轮中位数，加速比取同轮配对比值中位数，不能互换排序或把微小差异当成稳定优劣。
+
+速度包含 Prefill 与完整生成，不是纯 Decode 或 ShareGPT 并发吞吐。不同 Draft 训练和容量不匹配，不宣称严格结构消融。
 
 同一 DSpark checkpoint 推理时开启 Markov 的三轮配对吞吐比为 **1.846838×（+84.68%）**。Markov Only 与 Fixed 的输出、提议、接受轨迹完全相同；Fixed 额外计算 confidence 但不截断，本负载速度没有明显差别。Confidence 0.5/0.8 相对 Fixed 的配对吞吐分别 **−1.97% / −18.16%**：0.8 的已送验候选接受率升到 83.21%，实际输出/Verification 却从 4.826 降到 3.873，更多验证轮抵消了截短窗口的收益。
 
-这是官方训练 Draft 的推理适配与消融，不是本项目训练出的模型。HF BF16、HF FP16 的旧失败仍保留，原 Target 算术组合通过不能单独证明 BF16 是历史全部分叉的根因。没有 EAGLE3 树验证、普通 Serving 接入、随机采样分布检验或 GSM8K/HumanEval 任务评分。完整条件、三轮范围、接受率、分任务数据及来源见 [正式结果](../results/speculative_compare/legacy-target-formal-20261021/README.md)。
+Confidence Head 独立预测分数，经 sigmoid 和固定阈值选择连续送验前缀，不是 Token Softmax 概率。当前只测 Batch=1 的固定阈值；没有队列负载、动态预算或吞吐成本模型，不能据此否定高并发下的负载感知 Confidence Scheduling。
+
+### Target 数值一致性与 Cache 适配证据
+
+旧 HF 路径中，AR 与多 Token 验证曾在相同输出历史下分叉。`humaneval:19` 的一个现场中，BF16 LM Head 对 Token 5980/429 均输出 31.625；相同 Hidden 的真实 FP32 Head 分数为 31.637157/31.575722。按原提议、验证、crop 历史重放，36 层 K/V 可逐元素重建现场；AR 单步 Cache 则不同。这支持该次分叉涉及分块数值历史与 Head 舍入，不能证明所有缓存或算子都没有问题。[原始控制实验](../results/speculative_compare/diagnostic-20261019/README.md)
+
+只替换 FP32 Head 仍分叉；HF FP16 短回归也只通过 20/21。最终组合使用 FP16 Target、真实 FP32 Head、BF16 Draft，固定关键 Linear/RMS/激活计算行数、统一逐 Query PagedAttention，并控制归约和 Draft MATH 后端。`LegacyCache` 将官方 Target Cache 的长度与裁剪映射到 `PagePool`，每 Query 因果长度屏蔽无效尾部；Draft DynamicCache 独立，五层 Target 特征在 `draft.fc` 入口转 BF16，请求结束 finally 归还 Target 页。实现见 [install_arithmetic()](../experiments/common/target.py)、[LegacyCache.crop()/LegacyTarget.forward()](../experiments/speculative_compare/legacy_target.py)、[install_draft_feature_bridge()](../experiments/speculative_compare/precision.py)。
+
+该组合先通过三请求 21/21 短回归，再完成十二输入三轮正式测量：七种投机配置各 **36/36**，总计 **252/252**；连同配对 AR 共 **360** 次请求、**92,160** 输出 Token，无运行错误、Target 页全部回收。它解决了受测负载中的一致性问题，**尚未通过单变量实验确定历史所有分叉的唯一根因**，也不是对任意输入与旧 HF AR 等价的证明。旧失败与诊断记录不改写。
+
+没有 EAGLE3 树验证、普通 Serving 接入、随机采样分布检验或 GSM8K/HumanEval 任务评分。完整条件、三轮范围、接受率、分任务数据及来源见 [正式结果](../results/speculative_compare/legacy-target-formal-20261021/README.md)。
 
 ## 8. 证据、归档与结项边界
 

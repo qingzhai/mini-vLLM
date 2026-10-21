@@ -1,8 +1,30 @@
 # MinivLLM Inference Lab
 
-基于 [MinivLLM](https://github.com/Wenyueh/MinivLLM) 的 Qwen3 推理引擎复现与优化项目，覆盖分页 KV Cache、Prefix/LRU、Chunked Prefill、DFlash 投机解码、CUDA Graph，以及 TP2、DP2、单机 1P1D 实验。
+基于 [MinivLLM](https://github.com/Wenyueh/MinivLLM) 的 Qwen3 推理引擎复现与优化项目。技术主线是 **基础推理引擎 → KV Cache/调度扩展 → DFlash＋CUDA Graph → EAGLE-3/DFlash/DSpark 对照与消融 → 多 GPU 推理与 AWQ**。模型与 Draft 使用官方权重，本项目完成执行适配、状态管理及受控实验，没有自行训练投机模型。
 
 代码围绕一份核心引擎组织，各实验保留独立配置和入口。主要优化与性能评测使用 A100-PCIE-40GB 和 Qwen3-8B；Qwen3-0.6B 用于早期基础推理、前缀缓存及分块调度的功能检查，未完成与 8B 同等范围的性能评测。所有性能结论都限定相应负载和比较对象。
+
+## 代表性技术工作与实验结果
+
+- **缓存与调度：** 扩展链式前缀复用、引用计数/LRU、Chunked Prefill 与混合调度。ShareGPT 派生 100 请求中，同一 Chunk 配置开启 Prefix，吞吐 **+20.23%**；Chunk 单独更慢。[正式报告](results/sharegpt/README.md)
+- **投机执行与方法对照：** 原 DFlash 路径实现多请求 Target 批量验证、连续前缀接受、KV 回滚与 Target Graph；新路径通过 `LegacyTarget` 保留官方三种 Draft 的提议/接受逻辑，比较方法及 DSpark 推理策略。两套口径见下表。
+- **多 GPU：** 比较 Single/TP2/DP2/1P1D；双卡 DP2 对单卡的系统总吞吐 **+19%～26%**，每卡效率下降。1P1D 对 DP2 吞吐接近，最大 ITL **−89%～90%**，P99 未全面改善；TP2 显存约减半，但更慢且完整生成仅 47/48 一致。[正式报告](results/distributed/README.md)
+- **AWQ：** 官方 W4A16 权重适配与 Triton 量化 GEMM，权重及量化元数据存储 **−62.77%**；该比例不是整个运行峰值显存降幅，所测推理未加速。[正式报告](results/awq/README.md)
+
+### 两套投机实验分别证明什么
+
+| 实验 | Draft 与候选预算 | 执行与负载 | 基线与代表结果 |
+|---|---|---|---|
+| [A 原 DFlash＋Target Graph](results/dflash_graph/README.md) | 官方 z-lab b16，15 个候选＋Pending | Target 支持多请求 Batched Verification；单请求、驻留≤2 的三请求；每请求 256 输出，四模式各三轮 | 相对 **AR Graph**，总输出吞吐 **2.99× / 1.52×**；输出与接受轨迹一致，正式 Target 验证 `fallback=0` |
+| [B EAGLE-3/DFlash/DSpark 对照](results/speculative_compare/legacy-target-formal-20261021/README.md) | 官方 DeepSpec 三种 Draft，最多 7 个候选＋Pending | 统一 Mini-vLLM Qwen3-8B Target **Eager**；Batch=1，无 Graph；十二条输入，每条 256 输出，三轮 | 相对配对 **AR Eager**，EAGLE-3 **2.93×**、DFlash **3.48×**、DSpark Markov Only **3.90×**、Fixed **3.89×**；七种投机配置共 **252/252** 完整输出一致 |
+
+两组时间均包含 Prefill 与完整生成。A 是固定单请求/三请求负载，B 是 GSM8K/HumanEval/MT-Bench 各四条输入的串行对照；Draft、候选预算、执行配置与软件环境不同，不能横向归因或相乘加速比。B 的固定算术参考 AR Eager 也不代表生产最优 AR 性能。三种 checkpoint 属于方法对照，同一 DSpark checkpoint 的开关才是推理消融。
+
+**DSpark 的发现：** 开启 Markov 后配对吞吐 **+84.68%**。Confidence 是辅助选择送验前缀长度的预测分数；阈值 0.5/0.8 相对 Fixed，配对吞吐反而 **−1.97% / −18.16%**。0.8 的送验候选接受率更高，但实际输出/验证从 4.826 降到 3.873，需要更多 Draft/Target 轮次。这里只评估 Batch=1 固定阈值，不能否定高并发负载感知调度。[完整消融分析](results/speculative_compare/legacy-target-formal-20261021/README.md#dspark-消融说明)
+
+Fixed 吞吐中位数为 **63.225 tokens/s**，略高于 Markov Only 的 **63.180**；后者的配对加速比中位数却略高（3.898× 对 3.894×）。配对比值中位数与吞吐中位数是不同统计量，本轮两者输出和接受轨迹相同，微小差值不足以判定稳定优劣。
+
+快速导航：[项目事实总览](docs/PROJECT_SUMMARY.zh.md) · [简历描述](docs/RESUME.zh.md) · [面试讲述与问答](docs/INTERVIEW.zh.md) · [原 DFlash＋Graph](results/dflash_graph/README.md) · [三方法与消融](results/speculative_compare/legacy-target-formal-20261021/README.md) · [原始数值诊断](results/speculative_compare/diagnostic-20261019/README.md)
 
 ## 从这里开始学习
 
@@ -62,25 +84,11 @@ Prefill 处理输入上下文并建立 KV；Decode 反复使用历史 KV 生成�
 ### 建议把学习重点放在哪里
 
 1. **先读请求和缓存。** 能画出一次 Prefill、两次 Decode 的 token 数、逻辑位置、物理页和释放时机。
-2. **再读 DFlash＋Graph。** 这是最强的性能成果；重点解释为什么要用 AR Graph 作基线、拒绝后回滚哪些状态、图回放时怎样更新元数据。
-3. **最后读 DP 与 1P1D。** 能讲清请求分配、KV 打包/迁移/重映射，以及为什么最大 ITL 改善不等于吞吐提升。
+2. **再读 DFlash＋Graph。** 重点解释为什么要用 AR Graph 作基线、拒绝后回滚哪些状态、图回放时怎样更新元数据。
+3. **接着读三种 Draft 与消融。** 区分方法对照与同 checkpoint 开关，解释 Markov、Confidence 和接受率/推进长度；再读 Target 数值排查。
+4. **最后读 DP 与 1P1D。** 能讲清请求分配、KV 打包/迁移/重映射，以及为什么最大 ITL 改善不等于吞吐提升。
 
 AWQ 和 TP 可以作为内存与并行的补充案例。算子 benchmark 是局部检查；正式模型路径、数值一致性与端到端收益要分别讨论。具体阅读函数、练习和验收问题见 [学习指南](docs/LEARNING_GUIDE.zh.md)。
-
-## 实测结果
-
-| 实验 | 比较对象 | 结果 |
-|---|---|---|
-| DFlash＋Target Graph，单请求 | 同执行器普通解码＋Graph | 5.513→1.846 s，46.43→138.70 tokens/s，**2.99×** |
-| DFlash＋Target Graph，三请求、batch≤2 | 同执行器普通解码＋Graph | 11.653→7.651 s，65.91→100.38 总 tokens/s，**1.52×** |
-| ShareGPT 派生 100 请求开启 Prefix | 同一 Chunked 配置关闭 Prefix | 43.67→52.51 tokens/s，**+20.2%** |
-| 双卡 DP2，两组负载 | 单卡，等驻留上限 | 总吞吐 **+19%～26%** |
-| 单机 1P1D，两组负载 | 双卡 DP2 | 吞吐近似持平，最大 token 间隔 **1.79～2.16→0.20～0.21 s** |
-| AWQ W4A16 | FP16 权重 | 权重及量化元数据存储 **−62.77%**；所测推理速度更慢 |
-| TP2 | 单卡 | 所测每卡峰值显存约 **20.08→10.10 GiB**；所测吞吐更低 |
-| EAGLE3 / DFlash / DSpark Markov Only，十二输入三轮 | 同算术配对 AR Eager | **2.93× / 3.48× / 3.90×**；252/252 组投机输出完整一致，无 Graph |
-
-DFlash＋Graph 为三轮中位数，其 24 次运行的 12,288 个输出 token 与基线一致；ShareGPT/多卡表为单次正式测量。各配置的精度、计时口径和边界见 [项目总结](docs/PROJECT_SUMMARY.zh.md)，精选原始指标见 [results](results/README.md)。
 
 ## 目录
 
@@ -103,7 +111,7 @@ docs/                  复现说明、项目总结、简历项目经历
 
 ## 安装与运行
 
-运行环境：Linux、Python 3.11、NVIDIA GPU；实测 PyTorch 2.9.1+cu128、Triton 3.5.1、Transformers 4.57.3。双卡实验要求同机两张 GPU。无需安装 vLLM。
+以下原引擎实验环境为 Linux、Python 3.11、NVIDIA GPU；实测 PyTorch 2.9.1+cu128、Triton 3.5.1、Transformers 4.57.3。双卡实验要求同机两张 GPU。新三种 Draft 对照另用 Transformers 5.10.2 的独立环境与[适配入口](experiments/speculative_compare/LEGACY_TARGET.zh.md)，不直接套用以下安装步骤。无需安装 vLLM。
 
 ```bash
 git clone https://github.com/qingzhai/mini-vLLM.git
@@ -142,7 +150,7 @@ python scripts/run.py decode -- --batch-sizes 1 --seq-lens 128 --iters 10 --warm
 
 新增 [EAGLE3 / DFlash / DSpark 对照](experiments/speculative_compare/README.md) 使用独立 DeepSpec 环境，官方 Draft 接入原 Mini-vLLM 稳定 Target。它按 Batch=1 串行执行，没有进入普通 Serving 调度器，也没有开启 Graph。原 HF BF16 / FP32 Head / HF FP16 的失败与诊断均保留，不能把最后通过解释成所有历史分叉已完成单因素归因。
 
-[十二条输入、三轮正式对照](results/speculative_compare/legacy-target-formal-20261021/README.md) 为 **252/252** 组投机输出逐 Token 一致。EAGLE3 / DFlash / DSpark Markov Only 的配对 **AR Eager** 加速比中位数为 **2.934× / 3.479× / 3.898×**；同一 DSpark checkpoint 启用 Markov 的配对吞吐收益约 **84.68%**，Confidence 0.5/0.8 相对 Fixed 分别下降 **1.97%/18.16%**。三种 checkpoint 是方法对照；同一 DSpark 内部开关才是推理策略消融。条件、所有七种模式与离线复算见正式报告，复现入口见 [Target 适配说明](experiments/speculative_compare/LEGACY_TARGET.zh.md)。
+全部七种模式、配对基线、原始 Token 与离线复算见[正式报告](results/speculative_compare/legacy-target-formal-20261021/README.md)，运行协议见 [Target 适配说明](experiments/speculative_compare/LEGACY_TARGET.zh.md)。ShareGPT 与多卡每配置仅单次正式测量；Graph 与新三方法各测三轮，不能把测量次数混用。
 
 ## 实验范围
 
