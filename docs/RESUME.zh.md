@@ -1,17 +1,13 @@
-# 2026.10　轻量级大模型推理引擎复现与优化
+# Mini-vLLM 推理引擎扩展与投机解码优化 | 2026.10
 
-**项目概述：** 基于开源 MinivLLM，围绕 Qwen3-8B 扩展 KV Cache 与请求调度，集成 DFlash 批量投机解码、Target CUDA Graph，并完成 EAGLE3/DFlash/DSpark 方法对照、Markov/Confidence 消融及双卡部署实验。技术栈：Python、PyTorch、Triton、CUDA Graph、NCCL、AWQ。
+**项目概述：** 基于开源 MinivLLM，面向 Qwen3-8B 扩展 KV Cache 与推理调度，集成 DFlash、CUDA Graph 及多 GPU 推理，并接入官方 EAGLE-3、DFlash、DSpark，构建统一 Target 验证与消融实验。技术栈：Python、PyTorch、Triton、CUDA Graph、NCCL。
 
-**缓存与请求调度：** 扩展分页 KV、链式块哈希前缀匹配与 LRU，支持 Chunked Prefill 和 P/D 混合连续批处理，验证部分 Prefill 不采样、请求补位与页回收。固定版本 ShareGPT 派生 100 请求中，三种调度输出逐 Token 一致；同一 Chunk 配置开启 Prefix，单次吞吐 **43.67→52.51 tokens/s（+20.2%）**。
+**KV Cache 与请求调度：** 基于分页 KV 管理实现链式块哈希前缀复用、引用计数/LRU 及 Chunked Prefill 混合调度，支持共享 KV、部分 Prefill 不采样与请求动态补位。100 请求 ShareGPT 受控负载下，同一 Chunk 配置启用 Prefix 后，输出吞吐提升 **20.23%**。
 
-**DFlash 与 CUDA Graph：** 接入官方 Draft，实现批量 Target 验证、连续前缀接受与 KV 回滚，按 batch/query 分桶捕获 Target 前向图。单 A100 40GB、固定每请求 256 输出，三轮中位数相对 **AR Graph**：单请求 **5.513→1.846 s**，驻留≤2 的三请求总耗时 **11.653→7.651 s**，总吞吐 **2.99×/1.52×**；输出和接受轨迹一致，验证前向无 fallback。
+**DFlash 与 CUDA Graph：** 接入官方 DFlash Draft，实现多请求 Target 批量验证、连续前缀接受及 KV 回滚；通过静态缓冲与 Batch/Query 形状分桶捕获 Target 前向图。在单 A100 40GB、256-Token 实验中，相较 AR Graph 基线，单请求及三请求总吞吐分别提升 **2.99× / 1.52×**，三轮输出和接受轨迹一致，验证前向无 Graph Fallback。
 
-**投机方法对照与消融：** 将官方 EAGLE3/DFlash/DSpark 接入同一稳定 Target。单 A100 40GB、12 条固定输入、每条 256 输出、三轮测量，相对配对 **AR Eager** 的吞吐分别为 **2.93×/3.48×/3.90×**（DSpark Markov Only），**252/252** 组投机输出逐 Token 一致；同一 DSpark checkpoint 启用 Markov 后配对吞吐 **+84.68%**，Confidence 截断未获得总体吞吐收益。
+**投机解码对照与消融：** 将官方 EAGLE-3、DFlash、DSpark 接入统一 Qwen3-8B Target，开展固定候选预算下的方法对照与 DSpark 推理消融。单 A100、Batch=1、无 Graph 实验中，相对配对 AR Eager，三种方法吞吐分别提升 **2.93× / 3.48× / 3.90×**（DSpark Markov Only）；同一 DSpark Checkpoint 启用 Markov 后吞吐提升 **84.68%**，发现 Confidence 截断虽提高接受率，却未改善整体吞吐。
 
-**双卡 DP 与 P/D 分离：** 实现双副本独立 KV、按驻留数路由及单机 1P1D 的全部 36 层 K/V NCCL 迁移与页表重映射。两组 ShareGPT 派生负载单次测量中，DP2 较单卡总吞吐 **+19%～26%**；1P1D 在接近 DP2 的吞吐下，将最大 Token 间隔由 **1.79～2.16 s 降至 0.20～0.21 s**；两模式各 48 条请求与单卡输出一致。
+**AWQ 量化推理：** 集成官方 AWQ W4A16 权重加载与量化 Linear 参考验证，实现 Triton 量化 GEMM，权重及量化元数据存储较 FP16 减少 **62.77%**；所测峰值 allocated 显存由 **19.87～20.03 GiB 降至 10.31～10.47 GiB**。所测量化推理未获得吞吐提升。
 
-**量化与张量并行：** 加载官方 AWQ W4A16 并验证量化 Linear，权重及量化元数据存储较 FP16 **−62.77%**；完成 NCCL TP2 分片加载与推理，每卡峰值显存约 **20.08→10.10 GiB**。所测 AWQ、TP2 均未获得吞吐提升。
-
----
-
-以上为可并入个人简历的项目经历。DFlash＋Graph 使用 z-lab b16 Draft，相对 AR Graph；三方法对照使用 DeepSpec 官方七候选 checkpoint，相对各自同进程 AR Eager，计时包括 Prefill 与完整生成，Batch=1、无 Graph，252 组为 12 条输入×3 轮×7 种投机模式。三方法不是匹配训练条件的结构消融；Markov/Confidence 是同一 checkpoint 的推理策略消融。Prefix 的 20.2% 相对同一 Chunk 配置；量化数字仅为权重及元数据存储。没有宣称自行训练 Draft、生产 vLLM 优势或全部功能联合启用。证据见 [项目总结](PROJECT_SUMMARY.zh.md) 与 [三方法正式结果](../results/speculative_compare/legacy-target-formal-20261021/README.md)。
+**多 GPU 推理：** 实现 TP2 张量分片、DP2 双副本路由及单机 1P1D Prefill/Decode 分离，通过 NCCL 完成全部 36 层 KV 迁移与物理页表重映射。双 A100 两组受控负载下，DP2 相较单卡总吞吐提升 **19%～26%**；1P1D 在与 DP2 吞吐接近时，最大 ITL 降低约 **89%～90%**。
