@@ -1,0 +1,9 @@
+{
+  "lock": "/hy-tmp/minivllm-work/results/prepared-local-20261019-065730Z/lock.json",
+  "evidence": "/hy-tmp/minivllm-work/results/gpu-smoke-20261019-070027Z/measured/dspark-records.jsonl",
+  "output": "/hy-tmp/minivllm-work/results/dspark-greedy-diagnostic-20261019-083515Z-hBD8YQ/diagnostic",
+  "case": "humaneval:19",
+  "tokens": 32,
+  "focus_round": 5,
+  "full_bf16_reduction": false
+}

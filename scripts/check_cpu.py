@@ -24,7 +24,11 @@ def main():
     for path in python_files:
         ast.parse(path.read_text(), filename=str(path))
     runs = [('tests', 'check_release.py', []),
-            ('experiments/distributed', 'verify_cpu.py', [])]
+            ('experiments/distributed', 'verify_cpu.py', []),
+            ('experiments/speculative_compare', 'verify_cpu.py', []),
+            ('experiments/speculative_compare', 'verify_divergence_cpu.py', []),
+            ('experiments/speculative_compare', 'verify_legacy_formal_cpu.py', []),
+            ('experiments/speculative_compare', 'verify_restore_weights_cpu.py', [])]
     if args.transport:
         runs.append(('experiments/distributed', 'verify_transport_cpu.py', []))
     if args.tensor:
@@ -32,7 +36,9 @@ def main():
             p.error('--tensor requires PyTorch; CPU build is sufficient')
         runs += [('experiments/distributed', 'verify_tensors_cpu.py', []),
                  ('experiments/dflash_graph', 'verify_graph_executor_cpu.py', []),
-                 ('experiments/dflash_graph', 'verify_runtime_cpu.py', [])]
+                 ('experiments/dflash_graph', 'verify_runtime_cpu.py', []),
+                 ('experiments/speculative_compare', 'verify_diagnostic_cpu.py', []),
+                 ('experiments/speculative_compare', 'verify_legacy_target_cpu.py', [])]
     report = dict(checked_at_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                   actual_gpu_execution=False, ast_files=len(python_files), checks=[], skipped=[])
     with tempfile.TemporaryDirectory() as folder:

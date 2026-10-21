@@ -46,15 +46,16 @@ Prefill 处理输入上下文并建立 KV；Decode 反复使用历史 KV 生成�
 
 这些技术优化的对象不同。缓存命中可以减少 Prefill 工作；Graph 减少提交开销；投机解码减少昂贵 Target 调用；DP 通过增加完整副本扩展总吞吐；PD 让两类计算分别占用设备。是否更快取决于负载、实现和硬件，结果表也保留了未加速的配置。
 
-### 仓库中的三条执行路径
+### 仓库中的执行路径
 
 | 路径 | 调用链 | 适合先理解什么 |
 |---|---|---|
 | 普通引擎与调度 | `LLMEngine → Scheduler/ChunkScheduler → ModelRunner` | 请求生命周期、分页 KV、Prefix、Chunk；ShareGPT 使用独立参考算术适配 |
 | DFlash＋Graph | `GraphDFlashRuntime → TargetGraphExecutor → Target.model` | 草稿、批量验证、接受/回滚、静态图输入；独占自己的 KV，不调用普通 `engine.step()` |
 | 多卡实验 | `run_load → Session → torchrun worker → Target` | DP 路由、TP 组、真实 NCCL KV 迁移、P/D 两端职责 |
+| 三种 Draft 对照 | `DeepSpec evaluator → LegacyTarget → TargetGraphExecutor eager` | 官方提议/接受循环、原 Target 适配、Markov/Confidence 消融；串行 Batch=1，无 Graph |
 
-共享 `src/myvllm` 和数值/加载工具，保留三条实验路径，是为了让每个结论有明确配置。仓库没有把所有开关合并成一个经过验证的生产服务。
+共享 `src/myvllm` 和数值/加载工具，各实验路径保留明确配置。仓库没有把所有开关合并成一个经过验证的生产服务。
 
 根目录 `main.py` 保留历史引擎的基础配置供实验导入；复现实验使用 `scripts/run.py`，不要把旧 demo 默认参数当成完整实验配置。
 
@@ -77,6 +78,7 @@ AWQ 和 TP 可以作为内存与并行的补充案例。算子 benchmark 是局�
 | 单机 1P1D，两组负载 | 双卡 DP2 | 吞吐近似持平，最大 token 间隔 **1.79～2.16→0.20～0.21 s** |
 | AWQ W4A16 | FP16 权重 | 权重及量化元数据存储 **−62.77%**；所测推理速度更慢 |
 | TP2 | 单卡 | 所测每卡峰值显存约 **20.08→10.10 GiB**；所测吞吐更低 |
+| EAGLE3 / DFlash / DSpark Markov Only，十二输入三轮 | 同算术配对 AR Eager | **2.93× / 3.48× / 3.90×**；252/252 组投机输出完整一致，无 Graph |
 
 DFlash＋Graph 为三轮中位数，其 24 次运行的 12,288 个输出 token 与基线一致；ShareGPT/多卡表为单次正式测量。各配置的精度、计时口径和边界见 [项目总结](docs/PROJECT_SUMMARY.zh.md)，精选原始指标见 [results](results/README.md)。
 
@@ -86,6 +88,7 @@ DFlash＋Graph 为三轮中位数，其 24 次运行的 12,288 个输出 token �
 src/myvllm/             核心模型、算子、KV 管理和调度
 experiments/common/    共享加载、固定计算形状和复现工具
 experiments/dflash_graph/   AR / DFlash × eager / Graph 四项对照
+experiments/speculative_compare/  EAGLE3 / DFlash / DSpark 对照与原 Target 适配（正式一致性已通过）
 experiments/distributed/    single / TP2 / DP2 / 1P1D 对照
 experiments/sharegpt/       固定 ShareGPT 派生 100 请求调度对照
 experiments/awq/            W4A16 权重加载、量化算子与基线
@@ -136,6 +139,10 @@ python scripts/run.py decode -- --batch-sizes 1 --seq-lens 128 --iters 10 --warm
 ```
 
 每次运行创建新的结果目录，保存配置、日志和完整源码，再生成 records ZIP；不包含模型或环境。使用 `--dry-run` 查看命令而不调用 GPU。CPU 验证：`python scripts/check_cpu.py`；包含 CPU Torch 合约测试：`python scripts/check_cpu.py --tensor`。
+
+新增 [EAGLE3 / DFlash / DSpark 对照](experiments/speculative_compare/README.md) 使用独立 DeepSpec 环境，官方 Draft 接入原 Mini-vLLM 稳定 Target。它按 Batch=1 串行执行，没有进入普通 Serving 调度器，也没有开启 Graph。原 HF BF16 / FP32 Head / HF FP16 的失败与诊断均保留，不能把最后通过解释成所有历史分叉已完成单因素归因。
+
+[十二条输入、三轮正式对照](results/speculative_compare/legacy-target-formal-20261021/README.md) 为 **252/252** 组投机输出逐 Token 一致。EAGLE3 / DFlash / DSpark Markov Only 的配对 **AR Eager** 加速比中位数为 **2.934× / 3.479× / 3.898×**；同一 DSpark checkpoint 启用 Markov 的配对吞吐收益约 **84.68%**，Confidence 0.5/0.8 相对 Fixed 分别下降 **1.97%/18.16%**。三种 checkpoint 是方法对照；同一 DSpark 内部开关才是推理策略消融。条件、所有七种模式与离线复算见正式报告，复现入口见 [Target 适配说明](experiments/speculative_compare/LEGACY_TARGET.zh.md)。
 
 ## 实验范围
 

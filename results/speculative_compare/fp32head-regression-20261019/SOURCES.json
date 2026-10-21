@@ -1,0 +1,16 @@
+{
+  "archive": "speculative-fp32head-regression-records.zip",
+  "formal_benchmark": false,
+  "qualified": false,
+  "sha256": {
+    "report.json": "645873aee25eebb8b00897a12138370728865991eb97679dadaeda36ce900372",
+    "summary.csv": "27005d6e0d55101c30cab3d6cca7856e9a02fe9dc96dcf56604fcb062bc08a52",
+    "run-config.json": "4eed4fe6da211399fedfddb71bdb2cf5e5b55a62a0a18330467585c7dd009da6",
+    "eagle3-records.jsonl": "31fc471e41a8b65c6c42d8775398762e19aa9f0e1d868e1c833e9d1b0d08774a",
+    "dflash-records.jsonl": "cc26d53cc89e192e5d3ba34dfdd9b374401576ddf2f747aa138a1392c20ada82",
+    "dspark-records.jsonl": "73cb8497f415df5f4cc841629f473efd3f7c27cfcc9e5694c21b0e5a075dc975",
+    "eagle3-environment.json": "877e46754a035b65039df451190ed5ef5b2919075f479f5d90b96d8aafd6492f",
+    "dflash-environment.json": "dfb94818a5c50dc29fc7306fef4626b852136d1c5e438593dab06805e9e0a95c",
+    "dspark-environment.json": "b684dfce954355524b9cfcbecc8e7b12816cbbe920bd55fea2672e7b9874553c"
+  }
+}

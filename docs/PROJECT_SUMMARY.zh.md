@@ -11,6 +11,7 @@
 | 分块与连续批处理 | Chunked Prefill、Prefill/Decode 混合步骤、部分 Prefill 不采样、驻留上限和请求补位 |
 | Attention | 使用 Triton PagedAttention；原 Flash Prefill 有独立小规模算子参考检查。正式跨调度正确性使用统一的 per-query PagedAttention 参考配置 |
 | 投机解码 | 官方 BF16 DFlash Draft、批量 Target 验证、接受/拒绝、KV 回滚和请求补位 |
+| 三种 Draft 对照 | 官方 DeepSpec EAGLE3/DFlash/DSpark 接原 Target 的串行适配、Markov/Confidence 推理消融，十二输入三轮均通过 Greedy 检查 |
 | CUDA Graph | 普通 Decode 与 DFlash Target 验证图；静态缓冲、动态元数据更新、batch 1/2 × query 1/16 四种形状 |
 | 多卡 | NCCL TP2 分片、DP2 双副本路由、单机 1P1D 全层 KV 迁移与物理页重映射 |
 | W4A16 | 官方 AWQ checkpoint 消费检查、量化 Linear 参考验证、推理与显存统计 |
@@ -28,6 +29,9 @@
 | ShareGPT 调度 | BF16 主干＋FP32 LM Head，固定计算形状，全阶段 per-query PagedAttention，纯 Decode 使用 Graph | 每模式 1 次 |
 | Single/TP2/DP2/1P1D | FP16 主干＋FP32 LM Head，固定计算形状，全阶段 per-query PagedAttention；Graph/DFlash/AWQ/Prefix/Chunk 关闭 | 每 case/模式 1 次 |
 | AWQ | FP16 激活＋FP32 LM Head，官方 AWQ W4A16 GEMM group128；Graph/Prefix/Chunk 关闭 | 每 case/模式 3 次，各指标中位数 |
+| 三种 Draft 对照 | 原 Target FP16＋FP32 Head、BF16 Draft、固定算术与 per-query PagedAttention；Draft SDPA MATH，无 Graph | 十二条输入，每模式 3 轮，配对比值中位数 |
+
+三种 Draft 对照使用独立 Python 3.11.12 / Transformers 5.10.2 环境。它只记录串行完整生成时间和接受轨迹，不提供 Serving TTFT/ITL，也不与旧 Graph 路径混算加速比。
 
 TTFT 是从入队至首 token，E2E 是入队至完成，均包含引擎排队；TPOT 是首 token 后的平均生成间隔。ITL 是相邻输出 token 间隔，最大 ITL 和 P99 含义不同。总吞吐为整组输出 tokens/整组耗时；多请求总吞吐不是单个请求的生成速度。计时不包含模型加载、分词、预热、诊断或 Graph 捕获，不包含 HTTP 或网络服务开销。投机解码批量返回 token，其平均 TPOT 不能代替逐 token 可见间隔分布。
 
@@ -124,9 +128,29 @@ TP2 的主要结果是分摊每卡内存，峰值约 20.08→10.10 GiB；本轮�
 
 精选指标与来源摘要：[results/awq](../results/awq/README.md)。
 
-## 7. 证据、归档与结项边界
+## 7. EAGLE3 / DFlash / DSpark 方法对照与消融
 
-`results/` 发布的是精选摘要，含条件、指标及源记录 SHA256。每个目录的 `SOURCES.json` 记录原始 ZIP 文件名、ZIP SHA256 和所引用记录的 SHA256。完整 records ZIP 含 token、trace、配置与日志，由项目持有者本地保留；公开仓库不发布长 prompt、逐 token 原始记录、机器路径或连接信息。模型权重、虚拟环境和缓存不属于代码归档。
+单 A100 40GB，原 Mini-vLLM Target 适配到官方 DeepSpec 的提议、验证和接受循环；GSM8K / HumanEval / MT-Bench 各四条固定输入，共十二条，每条实际生成 256 Token、忽略 EOS、三轮。平均输入 120.33 Token，Batch=1，无 Graph。相同 Draft 在其 AR 基线中保持驻留。
+
+| 方法 | 完整生成 tokens/s 中位数 | 相对配对 AR Eager | 逐 Token 一致 |
+|---|---:|---:|---:|
+| EAGLE3 | 47.260 | 2.934× | 36/36 |
+| DFlash | 56.407 | 3.479× | 36/36 |
+| DSpark No Markov | 34.283 | 2.111× | 36/36 |
+| DSpark Markov Only | 63.180 | 3.898× | 36/36 |
+| DSpark Fixed | 63.225 | 3.894× | 36/36 |
+| DSpark Confidence 0.5 | 61.839 | 3.823× | 36/36 |
+| DSpark Confidence 0.8 | 51.741 | 3.193× | 36/36 |
+
+全部 360 次执行、92,160 输出 Token 完成，252 次投机请求均与配对 AR 完整一致；跨进程、跨轮 AR 一致，Target 页均回收。速度包含 Prefill 与完整生成，不是纯 Decode 或 ShareGPT 并发吞吐。不同 Draft 训练和容量不匹配，不宣称严格结构消融。
+
+同一 DSpark checkpoint 推理时开启 Markov 的三轮配对吞吐比为 **1.846838×（+84.68%）**。Markov Only 与 Fixed 的输出、提议、接受轨迹完全相同；Fixed 额外计算 confidence 但不截断，本负载速度没有明显差别。Confidence 0.5/0.8 相对 Fixed 的配对吞吐分别 **−1.97% / −18.16%**：0.8 的已送验候选接受率升到 83.21%，实际输出/Verification 却从 4.826 降到 3.873，更多验证轮抵消了截短窗口的收益。
+
+这是官方训练 Draft 的推理适配与消融，不是本项目训练出的模型。HF BF16、HF FP16 的旧失败仍保留，原 Target 算术组合通过不能单独证明 BF16 是历史全部分叉的根因。没有 EAGLE3 树验证、普通 Serving 接入、随机采样分布检验或 GSM8K/HumanEval 任务评分。完整条件、三轮范围、接受率、分任务数据及来源见 [正式结果](../results/speculative_compare/legacy-target-formal-20261021/README.md)。
+
+## 8. 证据、归档与结项边界
+
+`results/` 发布条件、指标及源记录 SHA256。每个目录的 `SOURCES.json` 记录原始 ZIP 文件名、ZIP SHA256 和所引用记录的 SHA256。ShareGPT 等历史系统实验以精选摘要为主；新增三方法对照保留公开任务的输入 Token ID、逐请求输出与接受轨迹 JSONL，便于离线复算首次分叉和消融指标。这些记录包含当时的通用工作目录路径，不含连接凭据。完整 ZIP、终端长日志和硬件清单由项目持有者本地保留；模型权重、虚拟环境和缓存不提交到代码仓库。
 
 旧 DFlash 的诊断单次结果与早期 TP 实验不再作为主要性能结论：本总结优先使用四项 Graph 对照与统一双卡对照。不同实验的精度、负载和测量次数有区别，不把其数值横向合并。
 

@@ -1,0 +1,192 @@
+absl-py @ https://mirrors.aliyun.com/pypi/packages/b3/7d/01e62f59e4166af1be6238d9f2b7f3453630c51b8044b412d05b5606532a/absl_py-2.5.1-py3-none-any.whl#sha256=721200f2f0e9960f2ca9dc3a2a706b201f5f75d812c158f059cbbe29eeafbdb8
+aiohappyeyeballs @ https://mirrors.aliyun.com/pypi/packages/71/43/1947f06babed6b3f1d7f38b0c767f52df66bfb2bc10b468c4a7de9eceff2/aiohappyeyeballs-2.7.1-py3-none-any.whl#sha256=9243213661e29250eb41368e5daa826fc017156c3b8a11440826b2e3ed376472
+aiohttp @ https://mirrors.aliyun.com/pypi/packages/42/74/2a2b22953de15c6c8a80debf26db3047e4e8a5a5db6dd7c2c6c01eec0605/aiohttp-3.14.5-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl#sha256=50a195903119008fe9cc68710535eb37f556ffffd6a7759afe70a2c145587045
+aiosignal @ https://mirrors.aliyun.com/pypi/packages/fb/76/641ae371508676492379f16e2fa48f4e2c11741bd63c48be4b12a6b09cba/aiosignal-1.4.0-py3-none-any.whl#sha256=053243f8b92b990551949e63930a839ff0cf0b0ebbe0597b0f3fb19e1a0fe82e
+annotated-doc @ https://mirrors.aliyun.com/pypi/packages/3e/30/e900b21425a860e195f32e37657aa1f7c7f2b1bfb26f03ca209b90933c06/annotated_doc-0.0.5-py3-none-any.whl#sha256=117bac03a25ede5df5440e855b32d556049ca169ead221505badf432fed4b101
+annotated-types @ https://mirrors.aliyun.com/pypi/packages/99/91/8acff4f5e50511b911bbccb72b8628a49c68ce14148cd9f6431094859a90/annotated_types-0.8.0-py3-none-any.whl#sha256=f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0
+anyio==4.9.0
+argon2-cffi==23.1.0
+argon2-cffi-bindings==21.2.0
+arrow==1.3.0
+asttokens==3.0.0
+async-lru==2.0.5
+attrs==25.3.0
+babel==2.17.0
+beautifulsoup4==4.13.4
+bleach==6.2.0
+blinker==1.4
+certifi==2025.4.26
+cffi==1.17.1
+charset-normalizer==3.4.2
+click @ https://mirrors.aliyun.com/pypi/packages/58/50/6c0d534c5f134586a8e1ba4e330569e32f057e33372ae556463212fb4cd3/click-8.5.0-py3-none-any.whl#sha256=255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360
+comm==0.2.2
+contourpy @ https://mirrors.aliyun.com/pypi/packages/5f/4b/6157f24ca425b89fe2eb7e7be642375711ab671135be21e6faa100f7448c/contourpy-1.3.3-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl#sha256=51e79c1f7470158e838808d4a996fa9bac72c498e93d8ebe5119bc1e6becb0db
+cryptography==3.4.8
+cycler @ https://mirrors.aliyun.com/pypi/packages/e7/05/c19819d5e3d95294a6f5947fb9b9629efb316b96de511b418c53d245aae6/cycler-0.12.1-py3-none-any.whl#sha256=85cef7cff222d8644161529808465972e51340599459b8ac3ccbac5a854e0d30
+datasets @ https://mirrors.aliyun.com/pypi/packages/65/99/00f3196036501b53032c4b1ab8337a0b978dee832ed276dae3815df4e8b5/datasets-4.8.5-py3-none-any.whl#sha256=5079900781719c0e063a8efdd2cd95a31ad0c63209178669cd23cf1b926149ff
+dbus-python==1.2.18
+debugpy==1.8.14
+decorator==5.2.1
+defusedxml==0.7.1
+dill @ https://mirrors.aliyun.com/pypi/packages/1e/77/dc8c558f7593132cf8fefec57c4f60c83b16941c574ac5f619abb3ae7933/dill-0.4.1-py3-none-any.whl#sha256=1e1ce33e978ae97fcfcff5638477032b801c46c7c65cf717f95fbc2248f79a9d
+distro==1.7.0
+distro-info==1.1+ubuntu0.2
+executing==2.2.0
+fastjsonschema==2.21.1
+filelock==3.16.1
+fonttools @ https://mirrors.aliyun.com/pypi/packages/b3/74/6117d6bec5736133fffd5cc4500426ddd43c761df9b380c796cd2268c069/fonttools-4.67.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl#sha256=59f44309ce78851c9621ee88e3f667ca3fbcc89dc0e8641336be3f12ba06bfd4
+fqdn==1.5.1
+frozenlist @ https://mirrors.aliyun.com/pypi/packages/11/b1/71a477adc7c36e5fb628245dfbdea2166feae310757dea848d02bd0689fd/frozenlist-1.8.0-cp311-cp311-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl#sha256=2552f44204b744fba866e573be4c1f9048d6a324dfe14475103fd51613eb1d1f
+fsspec==2024.10.0
+grpcio @ https://mirrors.aliyun.com/pypi/packages/e2/b7/14a9413cb7d4b2e782b4f79c81a918610caedf55138ab5916f5fdd4b002f/grpcio-1.84.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl#sha256=bd8ea8eb3817b226057cc1c0e7ec4b378dcda52043b972b6ff12b1152178967d
+h11==0.16.0
+hf-xet @ https://mirrors.aliyun.com/pypi/packages/a3/4c/2bf3b66c215d409655f28de1622393dde04c9461280d48c7924bb3b2decd/hf_xet-1.7.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl#sha256=2814a6e999d13464c4d679b788cc5d784eb5a4edfc638a31f10e9a11ab531ef8
+httpcore==1.0.9
+httplib2==0.20.2
+httpx==0.28.1
+huggingface_hub @ https://mirrors.aliyun.com/pypi/packages/fc/16/963096d224b80909432dc16561a615fd33d2d13beef3ce4c63fa25e40867/huggingface_hub-1.33.0-py3-none-any.whl#sha256=04e434b06e100eddbce9a6e817d72693a7884b10a79bd67ab48080d5c07eb899
+idna==3.10
+importlib-metadata==4.6.4
+ipykernel==6.29.5
+ipython==9.2.0
+ipython_pygments_lexers==1.1.1
+isoduration==20.11.0
+jedi==0.19.2
+jeepney==0.7.1
+Jinja2==3.1.6
+jiter @ https://mirrors.aliyun.com/pypi/packages/4a/8f/5c74e5e142a6736833d7a991ab04d5c0738038dc44db05af0bb3cd2559e8/jiter-0.17.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl#sha256=5888fe5abc1ca2fa834a3e1b4c7ef0dcece286a7d7e95a609ef0934b777b9fc9
+json5==0.12.0
+jsonpointer==3.0.0
+jsonschema==4.23.0
+jsonschema-specifications==2025.4.1
+jupyter-events==0.12.0
+jupyter-lsp==2.2.5
+jupyter_client==8.6.3
+jupyter_core==5.7.2
+jupyter_server==2.15.0
+jupyter_server_terminals==0.5.3
+jupyterlab==4.4.1
+jupyterlab-language-pack-zh-CN==4.4.post0
+jupyterlab_pygments==0.3.0
+jupyterlab_server==2.27.3
+keyring==23.5.0
+kiwisolver @ https://mirrors.aliyun.com/pypi/packages/89/00/05c2d0369ac322d22d5c05f84b5c4a6856fa6207fbae42869108a28f0383/kiwisolver-1.5.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl#sha256=95a02752aa032eef4aed01cda6d9b687c669bd0396bf4519eef8bba22a286720
+launchpadlib==1.10.16
+lazr.restfulclient==0.14.4
+lazr.uri==1.0.6
+Markdown @ https://mirrors.aliyun.com/pypi/packages/75/e6/1c7b7a48aa3f2c2a5d3c71a6c9c90a6c8c2903e5c73663b5f5e38f87257f/markdown-3.11.1-py3-none-any.whl#sha256=f1fa378ba5d682900c9ecb55ccceacca936016dda7c3b27097e8ae03ff78feb5
+markdown-it-py @ https://mirrors.aliyun.com/pypi/packages/b3/81/4da04ced5a082363ecfa159c010d200ecbd959ae410c10c0264a38cac0f5/markdown_it_py-4.2.0-py3-none-any.whl#sha256=9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a
+MarkupSafe==3.0.2
+matplotlib @ https://mirrors.aliyun.com/pypi/packages/79/db/e28c1b83e3680740aa78925f5fb2ae4d16207207419ad75ea9fe604f8676/matplotlib-3.10.9-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl#sha256=8e436d155fa8a3399dc62683f8f5d0e2e50d25d0144a73edd73f82eec8f4abfb
+matplotlib-inline==0.1.7
+mdurl @ https://mirrors.aliyun.com/pypi/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl#sha256=84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8
+mistune==3.1.3
+more-itertools==8.10.0
+mpmath==1.3.0
+multidict @ https://mirrors.aliyun.com/pypi/packages/ec/ac/a91709d7153489a3b53661b62af371112b96fb083d10443e22d54665a1e1/multidict-7.1.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl#sha256=c54ae1b89e582aa25f213cd8b5eac0bda1724e79299f486baeb3f562bbf82ca5
+multiprocess @ https://mirrors.aliyun.com/pypi/packages/86/c2/dec9722dc3474c164a0b6bcd9a7ed7da542c98af8cabce05374abab35edd/multiprocess-0.70.19-py311-none-any.whl#sha256=928851ae7973aea4ce0eaf330bbdafb2e01398a91518d5c8818802845564f45c
+nbclient==0.10.2
+nbconvert==7.16.6
+nbformat==5.10.4
+nest-asyncio==1.6.0
+networkx==3.4.2
+notebook_shim==0.2.4
+numpy @ https://mirrors.aliyun.com/pypi/packages/cf/c5/9fcb7e0e69cef59cf10c746b84f7d58b08bc66a6b7d459783c5a4f6101a6/numpy-2.4.4-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl#sha256=df3775294accfdd75f32c74ae39fcba920c9a378a2fc18a12b6820aa8c1fb502
+nvidia-cublas-cu12==12.8.4.1
+nvidia-cuda-cupti-cu12==12.8.90
+nvidia-cuda-nvrtc-cu12==12.8.93
+nvidia-cuda-runtime-cu12==12.8.90
+nvidia-cudnn-cu12==9.10.2.21
+nvidia-cufft-cu12==11.3.3.83
+nvidia-cufile-cu12==1.13.1.3
+nvidia-curand-cu12==10.3.9.90
+nvidia-cusolver-cu12==11.7.3.90
+nvidia-cusparse-cu12==12.5.8.93
+nvidia-cusparselt-cu12==0.7.1
+nvidia-nccl-cu12==2.27.5
+nvidia-nvjitlink-cu12==12.8.93
+nvidia-nvshmem-cu12==3.3.20
+nvidia-nvtx-cu12==12.8.90
+oauthlib==3.2.0
+openai @ https://mirrors.aliyun.com/pypi/packages/15/0e/331df43df633e6105ff9cf45e0ce57762bd126a45ac16b25a43f6738d8a2/openai-2.6.1-py3-none-any.whl#sha256=904e4b5254a8416746a2f05649594fa41b19d799843cd134dac86167e094edef
+opencv-contrib-python==4.11.0.86
+overrides==7.7.0
+packaging==25.0
+pandas @ https://mirrors.aliyun.com/pypi/packages/63/be/dfb6cc9329d0bbe76dadda8a1113d026bb996ec76c509221368dc68349f4/pandas-3.0.6-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl#sha256=47121f9571503f724c9b93e297ab6254ac99c77adf5e9ed085ea419fd585c258
+pandocfilters==1.5.1
+parso==0.8.4
+pexpect==4.9.0
+pillow==11.0.0
+platformdirs==4.3.7
+prettytable @ https://mirrors.aliyun.com/pypi/packages/ee/8c/83087ebc47ab0396ce092363001fa37c17153119ee282700c0713a195853/prettytable-3.17.0-py3-none-any.whl#sha256=aad69b294ddbe3e1f95ef8886a060ed1666a0b83018bbf56295f6f226c43d287
+prometheus_client==0.21.1
+prompt_toolkit==3.0.51
+propcache @ https://mirrors.aliyun.com/pypi/packages/c7/06/519a5ebb48b6f94beb48396e55c905f12246a25c3a3608a7ec7bceabf50e/propcache-0.5.4-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl#sha256=6e9368e87a3efc285e559131092c5db643eb8e56de4ee42064d5baec22ef2bb5
+protobuf @ https://mirrors.aliyun.com/pypi/packages/db/f3/3996583dd2906297a637af12114deddf7658af6e683fedb83be061983fb5/protobuf-7.36.2-cp310-abi3-manylinux2014_x86_64.whl#sha256=89f23aa53c24553a2416fd4fd1ec06f74fa42b14b546d8883128813f775bbfd2
+psutil==7.0.0
+ptyprocess==0.7.0
+pure_eval==0.2.3
+py3nvml==0.2.7
+pyarrow @ https://mirrors.aliyun.com/pypi/packages/e1/81/8e685683897a6d3d5887c3e2fd24f3c14bc5d6d6bb3a2387484e665c580e/pyarrow-26.0.0-cp311-cp311-manylinux_2_28_x86_64.whl#sha256=6e89dee53aaeb50505ed6152ea55bc7ddfd4f4df264f5427ea255288d8f0e580
+pycparser==2.22
+pydantic @ https://mirrors.aliyun.com/pypi/packages/eb/47/c95ffc2009878c7aac0c5e08528022dcb885933252a88b5f170058014464/pydantic-2.13.5-py3-none-any.whl#sha256=346a034f080da3755d8e9cb5e00e8b07de1d39e4f6e2c87d8ab7cafa0b269a73
+pydantic_core @ https://mirrors.aliyun.com/pypi/packages/cf/bc/3fa2d76b83162820a17da7f645b28d1cba99fc8e1e5fc6517067ec450fa1/pydantic_core-2.46.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl#sha256=49776eab08766a08dfff7012f8b422dcd7e25e43b316eedf0477c24fcfa84b7c
+Pygments==2.19.1
+PyGObject==3.42.1
+PyJWT==2.3.0
+pyparsing @ https://mirrors.aliyun.com/pypi/packages/38/bb/d215ee7c73b61497b28a5503f9f53523f294fcc936762b7caf90e0c1c2b5/pyparsing-3.3.3-py3-none-any.whl#sha256=ece8c00a69cf01b45d0b1dedabb469c90d8caf996d4fda40f147627a122849a4
+python-apt==2.4.0+ubuntu4
+python-dateutil==2.9.0.post0
+python-json-logger==3.3.0
+pytorch-triton==3.3.0+git96316ce5
+PyYAML @ https://mirrors.aliyun.com/pypi/packages/71/60/917329f640924b18ff085ab889a11c763e0b573da888e8404ff486657602/pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl#sha256=b8bb0864c5a28024fac8a632c443c87c5aa6f215c0b126c449ae1a150412f31d
+pyzmq==26.4.0
+referencing==0.36.2
+regex @ https://mirrors.aliyun.com/pypi/packages/8a/70/aa08d1d2b294894b365e5f8ba5380fe3f8546acdb81f10639dfd74209c37/regex-2026.9.29-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl#sha256=612b709381c0355b70d89cdb51b7f670591ed5cbbc0e3b5337488019dc667b65
+requests==2.32.3
+rfc3339-validator==0.1.4
+rfc3986-validator==0.1.1
+rich @ https://mirrors.aliyun.com/pypi/packages/82/3b/64d4899d73f91ba49a8c18a8ff3f0ea8f1c1d75481760df8c68ef5235bf5/rich-15.0.0-py3-none-any.whl#sha256=33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb
+rpds-py==0.24.0
+safetensors @ https://mirrors.aliyun.com/pypi/packages/a0/60/429e9b1cb3fc651937727befe258ea24122d9663e4d5709a48c9cbfceecb/safetensors-0.7.0-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl#sha256=dac7252938f0696ddea46f5e855dd3138444e82236e3be475f54929f0c510d48
+SecretStorage==3.3.1
+Send2Trash==1.8.3
+sentencepiece @ https://mirrors.aliyun.com/pypi/packages/ef/66/fb191403ade791ad2c3c1e72fe8413e63781b08cfa3aa4c9dfc536d6e795/sentencepiece-0.2.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl#sha256=4f5a3e0d9f445ed9d66c0fec47d4b23d12cfc858b407a03c194c1b26c2ac2a63
+shellingham @ https://mirrors.aliyun.com/pypi/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl#sha256=7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686
+six==1.16.0
+sniffio==1.3.1
+soupsieve==2.7
+ssh-import-id==5.11
+stack-data==0.6.3
+supervisor==4.2.5
+sympy==1.13.3
+tensorboard @ https://mirrors.aliyun.com/pypi/packages/9c/d9/a5db55f88f258ac669a92858b70a714bbbd5acd993820b41ec4a96a4d77f/tensorboard-2.20.0-py3-none-any.whl#sha256=9dc9f978cb84c0723acf9a345d96c184f0293d18f166bb8d59ee098e6cfaaba6
+tensorboard-data-server @ https://mirrors.aliyun.com/pypi/packages/73/c6/825dab04195756cf8ff2e12698f22513b3db2f64925bdd41671bfb33aaa5/tensorboard_data_server-0.7.2-py3-none-manylinux_2_31_x86_64.whl#sha256=ef687163c24185ae9754ed5650eb5bc4d84ff257aabdc33f0cc6f74d8ba54530
+terminado==0.18.1
+tinycss2==1.4.0
+tokenizers @ https://mirrors.aliyun.com/pypi/packages/2e/76/932be4b50ef6ccedf9d3c6639b056a967a86258c6d9200643f01269211ca/tokenizers-0.22.2-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl#sha256=369cc9fc8cc10cb24143873a0d95438bb8ee257bb80c71989e3ee290e8d72c67
+torch==2.9.1
+torchaudio==2.9.1
+torchvision==0.24.1
+tornado==6.4.2
+tqdm @ https://mirrors.aliyun.com/pypi/packages/16/e1/3079a9ff9b8e11b846c6ac5c8b5bfb7ff225eee721825310c91b3b50304f/tqdm-4.67.3-py3-none-any.whl#sha256=ee1e4c0e59148062281c49d80b25b67771a127c85fc9676d3be5f243206826bf
+traitlets==5.14.3
+transformers @ https://mirrors.aliyun.com/pypi/packages/73/6f/e1564b0cc182afa05e219a8e09a8e770ffaab879b6b824b56c819bd221da/transformers-5.10.2-py3-none-any.whl#sha256=8a669db546f82c7c3618cb46ceb0f0afd89292bc70f319c058f8332ec63e268d
+triton==3.5.1
+typer @ https://mirrors.aliyun.com/pypi/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl#sha256=e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff
+types-python-dateutil==2.9.0.20241206
+typing-inspection @ https://mirrors.aliyun.com/pypi/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl#sha256=65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147
+typing_extensions @ https://mirrors.aliyun.com/pypi/packages/18/67/36e9267722cc04a6b9f15c7f3441c2363321a3ea07da7ae0c0707beb2a9c/typing_extensions-4.15.0-py3-none-any.whl#sha256=f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548
+unattended-upgrades==0.1
+uri-template==1.3.0
+urllib3==2.4.0
+wadllib==1.3.6
+wcwidth==0.2.13
+webcolors==24.11.1
+webencodings==0.5.1
+websocket-client==1.8.0
+Werkzeug @ https://mirrors.aliyun.com/pypi/packages/a1/38/df03f564f43cec2684823f3cccae1a652ee7face1cbaa76fb223096e64d7/werkzeug-3.1.9-py3-none-any.whl#sha256=6392e50c78460ba618e5b21f08a71f59c99ce99cdc6cf6e3dd7e6ccca8754fab
+xmltodict==0.14.2
+xxhash @ https://mirrors.aliyun.com/pypi/packages/40/ff/e39e1900179ce7f0f23e7000d9fc672471a8d05b6b2dc657cb496c8975d0/xxhash-4.0.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl#sha256=101aa300de6ceef3d9c77569706330d8921fc45dd82bceed2084f1e9f2557a24
+yarl @ https://mirrors.aliyun.com/pypi/packages/95/0c/a71501bbc1a674ff72c4d6c2b75f4d9a5af819f5244c3a7558080a8802c5/yarl-1.25.1-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl#sha256=d5add7b4ca7afeea91d52e4d4e4db3b1fe9885b71f07054560d8c4296b7441a2
+zipp==1.0.0

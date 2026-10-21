@@ -1,0 +1,37 @@
+{
+  "passed_regression": "/hy-tmp/minivllm-work/results/speculative-legacy-target-regression-20261021-013240Z-VatRY1",
+  "report_sha256": "8222c38f5a6a0214430a8054fa86ff26e3d6f9ed85c1df1d9bba43a192817fee",
+  "config_sha256": "d2e9a419844a852a089fcec75f991a3928980ddcee61ba413ba6131ea8b0f5b7",
+  "records_sha256": {
+    "eagle3-records.jsonl": "8880177b01b4c576da66a15ec9daba846869575a2deec2b223c6f7f9fc83df15",
+    "dflash-records.jsonl": "063f023fcf97101cbbc1c5db08526a9e3b25b9467360a37135b124db0273e210",
+    "dspark-records.jsonl": "8d6f002cc3c62c0230091cc2f9675695f7ef51b8252553ac127159803179358c"
+  },
+  "compute_sha256": {
+    "benchmark.py": "e2be62ef9ce2f51c47c153300bb151c27dcf356c7602be0de418f9be2b8edadc",
+    "protocol.py": "29eee55e81a88877a7cfac4e01b5ec6c58f278529b97a7fe919bdd5fe31524e1",
+    "precision.py": "713679dec46b93504e9beae61a5b93ec91ac3a7a0919506de568736992d94596",
+    "legacy_target.py": "e6c0e02de86065ba462feaa1ad37e8f95e94594fa4235d9958d69620bca0c595",
+    "legacy-source-manifest.json": "b5606a50aa4524d2a1e7438322272e138af076c2ee4eccb3758a6b958b1b68d2"
+  },
+  "canonical_workload_sha256": "17fe9d15527c0a689ed6e560db5b21e0ba7e0f0fa5d0cc31ffe7801507bc7ea5",
+  "cases": [
+    "gsm8k:456",
+    "gsm8k:816",
+    "gsm8k:466",
+    "gsm8k:1017",
+    "humaneval:19",
+    "humaneval:127",
+    "humaneval:4",
+    "humaneval:79",
+    "mt-bench:11",
+    "mt-bench:47",
+    "mt-bench:71",
+    "mt-bench:9"
+  ],
+  "changes": {
+    "cases": "original twelve prompts",
+    "repeats": 3,
+    "target_logit_diagnostics": false
+  }
+}

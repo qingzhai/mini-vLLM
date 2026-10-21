@@ -1,0 +1,8 @@
+{
+  "lock": "/hy-tmp/minivllm-work/results/prepared-local-20261019-065730Z/lock.json",
+  "output": "/hy-tmp/minivllm-work/results/gpu-smoke-20261019-070027Z/measured",
+  "repeats": 1,
+  "max_new_tokens": 32,
+  "warmup_tokens": 32,
+  "started_utc": "2026-10-19T07:01:37.331479+00:00"
+}

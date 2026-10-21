@@ -1,6 +1,6 @@
 # 项目面试讲述与技术问答
 
-这份材料用来练习口头讲述，并能沿源码和结果继续展开。**性能主模型是 Qwen3-8B；项目基于开源 MinivLLM，使用官方 Qwen 权重、DFlash Draft 和 AWQ Checkpoint。** Qwen3-0.6B 只做过较早的基础功能检查，不与 8B 的正式性能评测并列。
+这份材料用来练习口头讲述，并能沿源码和结果继续展开。**性能主模型是 Qwen3-8B；项目基于开源 MinivLLM，使用官方 Qwen 权重、EAGLE3/DFlash/DSpark Draft 和 AWQ Checkpoint。** Qwen3-0.6B 只做过较早的基础功能检查，不与 8B 的正式性能评测并列。
 
 阅读时区分三种说法：**理论原理**解释一种方法为什么可能有效；**项目实际实现**说明本仓库做了什么；**实验观察**只描述给定配置和负载测到的结果。下文的示意 Token、页号、地址和时间轴用于手推，不是新增实验数据。完整口径见 [项目总结](PROJECT_SUMMARY.zh.md)，源码阅读顺序见 [学习指南](LEARNING_GUIDE.zh.md)。
 
@@ -8,21 +8,21 @@
 
 > 我基于开源 MinivLLM 扩展请求和 KV 管理，重点集成 DFlash 投机解码与 Target CUDA Graph。单张 A100 40GB 跑 Qwen3-8B，相对同执行器已开启 Graph 的普通自回归解码，固定单请求和三请求的总输出吞吐约为 2.99 倍、1.52 倍，三轮输出逐 Token 一致。它是受控实验原型，还不是生产级 vLLM 替代品。
 
-这段只报一组主要成果，不额外堆叠多卡、量化和调度指标。证据：[DFlash＋Graph 正式结果](../results/dflash_graph/README.md)。
+这段只报一组主要成果。若被追问最近扩展，可以补一句：“我还在同一 Target 上比较了 EAGLE3、DFlash、DSpark，用 Markov/Confidence 消融解释接受率和速度的关系。”不要在 30 秒里再堆一组不同基线的倍数。证据：[DFlash＋Graph 正式结果](../results/dflash_graph/README.md)。
 
 ## 2. 2 分钟项目介绍
 
-> 我希望把大模型推理中的请求调度、KV 管理和性能优化连起来，所以基于开源 MinivLLM 已有的 Qwen 模型和算子做扩展，再用固定输入对照。
+> 我基于开源 MinivLLM，围绕 Qwen3-8B 做请求调度、KV 管理和投机解码实验。模型和 Draft 都使用官方权重，我的工作是执行适配、状态管理、数值排查和对照验证。
 >
-> 首先是请求和 KV 的生命周期。我扩展了完整前缀页复用、LRU 和 Chunked Prefill。关键是页分配出去不代表已经算完，部分 Prefill 不能提前输出答案。ShareGPT 派生 100 请求中，同一 Chunk 配置开启 Prefix，吞吐提高约 20%；但 Chunk 单独更慢。
+> 调度方面，我扩展了 Prefix、LRU 和 Chunked Prefill，处理未算完不能采样、共享页引用和请求补位。ShareGPT 派生 100 请求里，同一 Chunk 配置开启 Prefix，吞吐提高约 20%，但 Chunk 单独反而更慢。
 >
-> 主要优化是 DFlash 加 Target CUDA Graph。官方 Draft 一次提出多个候选，Target 合批验证，只接受连续正确前缀，并处理拒绝后的 KV 和特征。我为普通解码与投机验证捕获四种形状的图，每轮更新固定缓冲里的 Token 和页表。四模式各测三轮，以已开启 Graph 的普通解码为基线：单请求约从 5.51 秒降到 1.85 秒，三请求从 11.65 秒降到 7.65 秒，输出和接受轨迹一致。
+> 主要系统优化是 DFlash 加 Target CUDA Graph。我实现批量验证、连续前缀接受和 KV 回滚，再用固定输入缓冲与形状分桶减少提交开销。相对已经开启 Graph 的 AR，固定单请求和三请求吞吐分别约 2.99 倍、1.52 倍，输出和接受轨迹一致。
 >
-> 我还比较了 TP2、DP2 和单机 1P1D。DP2 的双卡总吞吐提高约 19% 到 26%；1P1D 真正迁移全部层的 Prompt KV，在接近 DP2 的吞吐下减少了最严重的出字停顿。TP2 分摊了显存但更慢，AWQ 也只有存储和显存收益。
+> 后来我把官方 EAGLE3、DFlash、DSpark 接到同一稳定 Target，做十二条固定输入、每条 256 输出、三轮对照。相对各自 AR Eager，三种方法约 2.93、3.48、3.90 倍，全部 252 组投机输出一致。同一 DSpark 权重开启 Markov 后吞吐提高约 85%；Confidence 0.8 虽提高接受率，却因每次推进更少而更慢。这组是单请求、无 Graph，不能和前面的 Graph 倍数混用。
 >
-> 验证上，我分别检查完整生成、同历史数值、Graph 执行和页回收。参考配置统一了部分计算形状和 Attention，带来额外计算开销；它不是最优吞吐配置，结论也不能外推成生产引擎的普遍优势。
+> 双卡部分比较了 TP2、DP2 和实际迁移全层 KV 的 1P1D；量化和 TP 只获得存储或显存收益，速度没有提升。验证上，我保留第一处分叉、数值和 Cache 轨迹，并复用固定形状、FP32 Head 与统一 Attention 建立稳定参考。项目是受控实验原型，没有生产服务和所有功能联合验收。
 
-讲述顺序是背景与基线 → KV/调度 → DFlash＋Graph → 多卡/量化 → 验证与取舍。数字只保留便于口述的精度，详细追问再打开结果表。
+讲述时先说明两个投机实验的不同基线；详细数据与三种方法的机制留到追问。
 
 ## 3. 5 分钟项目介绍
 
@@ -42,7 +42,9 @@
 >
 > 多卡比较 Single、TP2、DP2、1P1D。TP 切模型矩阵，DP 是两个完整副本分请求；1P1D 也是两份模型，GPU 0 Prefill、GPU 1 Decode，通过 NCCL 搬全部 36 层 Prompt KV，按目的页表重映射。P 生成首 Token，D 计算它自己的 KV，不重算 Prompt。DP2 总吞吐提高、每卡效率下降；1P1D 对 DP2 吞吐持平，最大出字间隔从约两秒到约 0.2 秒，P99 未全面改善。TP2 显存约减半但更慢，还有一条生成分叉；AWQ 也更慢，只有存储和显存收益。
 >
-> 正确性先定位第一处分叉，固定相同历史比较状态与数值，再做完整自由生成。当前固定算术、FP32 Head 和 per-query Attention 是通过的参考，不是最优吞吐配置，也未证明旧 Flash Prefill 分叉修复。三条路径各自验收，没有全部联合启用。后续先补负载、重复测量和 Profiling，再考虑 Draft 合批与异步 Handoff。
+> 后来我把官方 EAGLE3、DFlash、DSpark 接到同一 Target，统一七个候选预算，做十二条输入、三轮方法对照与 DSpark 推理消融。这里无 Graph，相对配对 AR Eager 分别约 2.93、3.48、3.90 倍，252 组投机输出一致。Markov 带来约 85% 吞吐提升；Confidence 0.8 的接受率从约 56% 升到 83%，每次验证实际输出却从 4.83 降到 3.87，所以整体更慢。
+>
+> 排查时，我抓到过 BF16 Head 将两个候选都算成 31.625 的现场；只换 FP32 Head、再换 FP16 都未完全通过。最后复用旧 Target 的固定形状、统一逐 Query Attention 和精度控制，完整正式对照才通过。我能证明这个组合在已测负载有效，尚不能把全部分叉归因于 BF16。各路径独立验收，没有全部联合启用；后续应先做 Profiling 与更多负载，再考虑 Draft 合批或异步 Handoff。
 
 ### 可展开的技术细节
 
@@ -54,6 +56,7 @@
 | 投机正确性 | P/A/B/C → A/B/X；三种状态分别处理 | `accept_prefix()`、`commit()`、`propose()`，见第 9～15 题 |
 | Graph 的动态输入 | 地址不变、内容变化；跨 256-token 页边界 | `build_query_metadata()`、`_fill()`、`run()`，见第 16～19 题 |
 | 多卡的价值 | 一个模型切两卡 vs 两份模型；257-token KV 重映射 | `run_load()`、`Target.pack()/unpack()`，见第 20～25 题 |
+| 三种 Draft 与消融 | 区分方法对照和同 checkpoint 开关，手算接受率与推进长度 | 第 9、15、29～31 题；[三方法正式报告](../results/speculative_compare/legacy-target-formal-20261021/README.md) |
 | 实验是否可信 | 明确基线、工作量、计时边界、次数和未通过项 | 第 26～32 题与文末正式数据表 |
 
 ## 4. 项目技术问答
@@ -70,7 +73,7 @@
 
 **深入解释：** 分页、基础 Continuous Batching、Qwen 模型和并行 Linear 等已有开源基础，不能全部说成独立创新。DFlash 算法和 Draft、AWQ 权重也有官方来源。本项目在这些基础上完成适配、状态管理、数值调试、对照和归档。面试中“我完成了集成与验证”和“我发明或训练了它”是两种完全不同的贡献。
 
-**项目实际实现：** 普通引擎是 [LLMEngine.step()](../src/myvllm/engine/llm_engine.py) → Scheduler/ChunkScheduler → ModelRunner；DFlash 是 [GraphDFlashRuntime](../experiments/dflash_graph/graph_runtime.py) → TargetGraphExecutor，独占 KV；多卡是 [Session/run_load()](../experiments/distributed/runtime.py) → worker → Target。来源见 [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md)，项目范围见 [PROJECT_SUMMARY](PROJECT_SUMMARY.zh.md)。
+**项目实际实现：** 普通引擎是 [LLMEngine.step()](../src/myvllm/engine/llm_engine.py) → Scheduler/ChunkScheduler → ModelRunner；旧 DFlash 是 [GraphDFlashRuntime](../experiments/dflash_graph/graph_runtime.py) → TargetGraphExecutor，独占 KV；多卡是 [Session/run_load()](../experiments/distributed/runtime.py) → worker → Target；新三方法是官方 DeepSpec 生成循环 → [LegacyTarget](../experiments/speculative_compare/legacy_target.py) → 原 Target Eager。来源见 [THIRD_PARTY_NOTICES](../THIRD_PARTY_NOTICES.md)，项目范围见 [PROJECT_SUMMARY](PROJECT_SUMMARY.zh.md)。
 
 **具体例子：** ShareGPT 用 BF16 普通引擎检查 Prefix/Chunk；DFlash 四项对照用 FP16 Target 独立运行时；分布式实验关闭 Graph/DFlash/Prefix/Chunk。它们共用部分模型与工具，但不是给同一个统一服务依次叠加所有开关。
 
@@ -181,29 +184,24 @@
 
 ### C. DFlash、Pending、验证与 KV 回滚
 
-#### 9. DFlash 和普通投机解码是什么关系？为什么能一次提出多个候选？
+#### 9. EAGLE3、DFlash、DSpark 有什么区别？你做的是三种消融吗？
 
-**面试官问题：** DFlash 是换了一个语言模型，还是投机解码的一种实现？它与自回归 Draft 有什么不同？
+**面试官问题：** 三种方法如何提出候选？哪些工作是你的，哪些来自官方？
 
-**30 秒回答：**
+**30 秒回答：** 三者都由 Draft 提议、Target 因果验证，最终只接受连续正确前缀。EAGLE3 在本轮官方单链实现中逐步产生候选；DFlash 通过 Masked Parallel Prediction 一次算出候选块；DSpark 先并行计算块特征，再用依赖前一个 Token 的轻量 Markov Head 顺序修正候选，Confidence Head 可以截短送验前缀。我使用官方训练好的三个 checkpoint，把它们接入同一稳定 Target 并完成对照。三个 checkpoint 是方法比较；同一 DSpark 的 Markov/Confidence 开关才是推理策略消融。
 
-> DFlash 仍然遵循“Draft 提议、Target 验证”的投机解码框架，最终输出由 Target 决定。区别在 Draft：普通自回归 Draft 通常逐 Token 生成候选，DFlash 使用 Block Diffusion，对一个带 MASK 的块一次 Forward 并行预测多个位置。本项目块长是 16，其中第一个是真实 Pending Token，后面 15 个位置是候选；Target 只接受从头连续正确的部分，所以并行提出 15 个不等于接受 15 个。
+**深入解释：** 普通自回归 Draft 通常要依次执行小模型步骤，DFlash 则一次 Forward 对带 MASK 的块共同预测未来位置。Draft 可以用非因果块内信息猜测；Target 仍必须保持因果性，不能提前看到待预测位置之后的候选。DSpark 并没有对每个候选再完整运行一遍 Draft Transformer：昂贵的块特征先并行算出，之后由较轻的 Markov Head 依据前一个 Token 修正。Confidence 在完整提议后计算并截断，不是提前少运行同比例的 Draft Backbone。
 
-**深入解释：**
+| 路径 | Draft 与候选预算 | Target 执行 | 正式比较对象 |
+|---|---|---|---|
+| 旧 DFlash＋Graph | z-lab b16，15 个候选＋Pending | B=1/2、Q=1/16，Eager/Graph 四项对照 | 主要相对 AR Graph，2.99×/1.52× |
+| 三种 Draft 对照 | DeepSpec 官方 EAGLE3、DFlash、DSpark，最多 7 个候选＋Pending | 串行 B=1，Q=1..8，原 Target Eager | 各自配对 AR Eager，2.934×/3.479×/3.898×（Markov Only） |
 
-理论上，投机解码把多次昂贵的 Target 单步调用，换成轻量 Draft 加一次多位置 Target 验证。DFlash 的特殊之处是 Masked Parallel Prediction：块内位置可相互关注，利用已有上下文特征共同预测未来位置，不需要把第一个候选采样出来后才开始算第二个候选。Target 仍使用 Causal Attention；验证位置只能看历史与当前以前的候选。两者的 Attention 可见范围不同，不能把 Draft 的非因果预测方式误套到 Target。[DFlash 官方论文](https://arxiv.org/html/2602.06036v1)说明了这一方法；本项目消费官方 Draft，没有训练它。
+**项目实际实现：** [benchmark._worker()](../experiments/speculative_compare/benchmark.py) 加载官方 Draft 并保留其 `generate_one_sample()`；[LegacyTarget.forward()/LegacyCache.crop()](../experiments/speculative_compare/legacy_target.py) 接入原 Target 和分页 Cache。官方固定提交中的 `deepspec/eval/eagle3/evaluator.py::_propose()` 是单链提议；`deepspec/eval/dspark/draft_ops.py::forward_dspark_draft_block()` / `build_dspark_proposal()` 负责 DFlash/DSpark 块提议；`deepspec/modeling/dspark/qwen3/modeling.py::sample_draft_tokens()` 选择是否调用 Markov Head；`base_evaluator.py::verify_draft_tokens()` / `generate_decoding_sample()` 验证、接受并裁剪 Target Cache。外部源码版本和 checkpoint 指纹见 [lock.json](../results/speculative_compare/legacy-target-formal-20261021/lock.json)，完整源码在原 records ZIP 中。
 
-**项目实际实现：**
+**具体例子：** 每轮七个候选时，DSpark No Markov 平均接受约 1.56 个 Draft Token，Markov Only 约 3.91 个；完成同样 36 次请求，验证次数从 3615 降到 1902，配对吞吐提高 84.68%。这是同一已训练 checkpoint 的推理开关效应。关闭 DSpark 的 Markov 后，权重仍是 DSpark，不能把它当作重新训练的官方 DFlash。
 
-[DFlashRuntime.propose()](../experiments/dflash_graph/dflash_runtime.py) 构造 `[Pending, MASK×15]`，调用一次 `self.draft(..., is_causal=False)`，再通过 Target 的 LM Head 对 Draft 后 15 行求 `argmax`。`generate()` 把候选交给 Target，之后调用 [accept_prefix()/commit()](../experiments/dflash_graph/state.py)。官方固定版本的 [DFlashDraftModel.forward() 与 Qwen3DFlashAttention.forward()](https://huggingface.co/z-lab/Qwen3-8B-DFlash-b16/blob/9b41424b7109f9c5413454f481b09a82b85333f4/modeling_dflash.py)可核对 Draft 的非因果 Attention；源码 SHA256 与归档结果一致。
-
-**具体例子：**
-
-自回归 Draft 提出 `A→B→C` 通常要先后执行三个小模型步骤；本项目 DFlash 一次得到 15 个候选。但如果第一个候选就与 Target 不同，这轮一个候选也不能接受，仍只能追加 Target 的一个正确 Token。
-
-**常见追问与边界：**
-
-“没有串行预测，是否绕过了自回归约束？”没有，Draft 可以猜，Target 的因果验证决定最终序列。当前实现验收 greedy 解码，未实现随机采样下完整的概率验收与分布修正，不能由 greedy 一致外推所有采样策略。
+**常见追问与边界：** 当前 EAGLE3 没有树搜索/树验证，三方法没有匹配训练数据和模型容量；所有新对照都是 B=1、无 Graph，没有进入普通 Serving 调度器。官方代码包含概率接受工具，但本项目正式验收只用 temperature=0，不证明随机采样分布一致。下文第 10～14 题的 15 候选、Q=16、MASK ID 和请求补位，主要对应旧 Graph 路径；新路径的候选预算与 Cache 适配单独标注。官方模型和算法不能说成由本项目训练或发明。
 
 #### 10. Target Hidden States 是什么？DFlash 实际用了哪些层？
 
@@ -334,13 +332,13 @@ Target KV 是大模型所有层的 K/V；Draft KV 是 Draft 自己的上下文�
 
 “那 batch=2 的吞吐是单请求速度吗？”不是，结果用三个请求共 768 个输出除整组耗时。Draft 合批、跨请求异步 Draft/Target 重叠，以及与 Prefix/Chunk 的联合调度都没有验证。
 
-#### 15. 15 个候选为什么不等于 15 倍加速？接受率低还能有效吗？
+#### 15. 候选数、接受率和平均推进长度怎样影响速度？Confidence 为什么反而慢？
 
-**面试官问题：** 单请求接受率只有约 31%，为什么还有收益？该看接受率还是平均推进长度？
+**面试官问题：** 旧 DFlash 接受率约 31% 仍能加速，新 DSpark 接受率升到 83% 却更慢，为什么？
 
 **30 秒回答：**
 
-> 候选数量只是预测预算，实际收益取决于每轮确认多少输出，以及 Draft 和验证各花多少时间。连续正确前缀之外的候选全作废；输出配额充足时还会补一个 Target Token，尾轮则按配额截断，所以接受率与平均推进长度不同。正式单请求场景提出 675 个候选、接受 211 个，接受率约 31.26%；45 轮验证完成首 Token 以外的 255 个输出，平均每轮推进约 5.67 个。这减少了 Target 调用，但还要付 Draft 与多位置验证成本。
+> 候选数量只是预测预算，实际收益取决于每轮确认多少输出，以及 Draft 和验证各花多少时间。连续正确前缀之外的候选全作废；输出配额充足时还会补一个 Target Token，尾轮则按配额截断，所以接受率与平均推进长度不同。旧 Graph 单请求场景提出 675 个候选、接受 211 个，接受率约 31.26%；45 轮验证完成首 Token 以外的 255 个输出，平均每轮推进约 5.67 个。这减少了 Target 调用，但还要付 Draft 与多位置验证成本。
 
 **深入解释：**
 
@@ -356,7 +354,21 @@ Target KV 是大模型所有层的 K/V；Draft KV 是 Draft 自己的上下文�
 
 **常见追问与边界：**
 
-不能用 15、接受率或 Target 调用减少比例直接推导端到端加速。也不能把另一场实验的 Graph 倍数乘过来。当前没有块长调优实验，不能说 16 是本硬件所有负载的最优值；它是所用官方 Draft 与当前图桶的固定配置。
+新 DSpark 对照正好提供了一个反例：
+
+| 同一 DSpark checkpoint | 平均送验候选数 | 已送验候选接受率 | 实际输出/验证 | 三轮验证次数 | 吞吐 tokens/s |
+|---|---:|---:|---:|---:|---:|
+| No Markov | 7.000 | 22.29% | 2.539 | 3615 | 34.283 |
+| Markov Only | 7.000 | 55.90% | 4.826 | 1902 | 63.180 |
+| Fixed | 7.000 | 55.90% | 4.826 | 1902 | 63.225 |
+| Confidence 0.5 | 5.711 | 66.66% | 4.722 | 1944 | 61.839 |
+| Confidence 0.8 | 3.520 | 83.21% | 3.873 | 2370 | 51.741 |
+
+Confidence 0.8 筛掉了较难接受的候选，所以送验集合的接受率升高；但每轮有效输出变少，Target 验证轮数增多，配对吞吐比 Fixed 下降 18.16%。0.5 也下降 1.97%。原官方 `_propose()` 先跑完整 Draft Block，`build_dspark_proposal()` 再计算 confidence、裁短送验前缀，不能按送验长度比例推算节省了 Draft 计算。
+
+“Markov Only 和 Fixed 是否重复？”两者计算不同：前者关闭 confidence head，后者计算 confidence 但阈值为零、不截断。本轮 36 组输出、提议与接受轨迹逐项相同；速度差约 0.06%，不足以声称明显收益。所有头权重仍驻留 GPU。开关由 [generate()](../experiments/speculative_compare/benchmark.py) 设置并在 finally 恢复；指标由 [summarize()](../experiments/speculative_compare/protocol.py) 及 [analyze_ablation.analyze()](../experiments/speculative_compare/analyze_ablation.py) 复算。
+
+不能用候选数、接受率或 Target 调用减少比例直接推导端到端加速，也不能乘另一场实验的 Graph 倍数。最后一轮可能超额计算，因此“平均接受 Draft 数＋1”与扣掉初始首 Token 后的实际输出/验证不同。没有块长扫描或 Draft/Target 分段计时，不能说某个块长普遍最优，也不能给唯一瓶颈的时间占比。
 
 ### D. CUDA Graph、静态缓冲与形状分桶
 
@@ -600,7 +612,7 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 
 **面试官问题：** 64 或 256 个输出是实际生成还是 PAD 补齐？不同实验为何用不同长度？
 
-**30 秒回答：** 固定输出长度是为了控制各模式完成相同工作量，避免某个模式早停后看起来更快。`ignore_eos=True` 关闭 EOS 停止条件，EOS 若被选中仍是一个真实生成 Token，下一轮继续以前向和 argmax 得到后继，直到输出配额用完，不用 PAD 填满。ShareGPT 和多卡每请求 64 个输出，DFlash 四模式每请求 256 个，长度不同所以只能在各自表内比较。
+**30 秒回答：** 固定输出长度是为了控制各模式完成相同工作量，避免某个模式早停后看起来更快。`ignore_eos=True` 关闭 EOS 停止条件，EOS 若被选中仍是一个真实生成 Token，下一轮继续以前向和 argmax 得到后继，直到输出配额用完，不用 PAD 填满。ShareGPT 和多卡每请求 64 个输出，DFlash 四模式每请求 256 个，长度不同所以只能在各自表内比较。新三方法对照也实际输出 256 个 Token，通过 `stop_token_ids=None` 保持固定工作量，不能误认成与 100 请求 ShareGPT 相同的负载。
 
 **深入解释：** EOS 是模型词表中的特殊 Token；“看到 EOS 就结束”由生成控制逻辑实施，不是 GPU 无法继续计算。忽略 EOS 会让续写可能超出自然回答的结束点，这适合固定工作量的系统测量，不等于自然对话体验或任务质量评测。DFlash 一轮可提交多个输出，最后用剩余配额截断，不能把多算但未提交的候选计入输出吞吐。
 
@@ -615,6 +627,10 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 **面试官问题：** 你怎样避免把首次编译、预热、缓存状态或机器波动当成优化收益？
 
 **30 秒回答：** 我先固定模型、精度、输入 Token、输出长度、到达规则、并发和 KV 预算，再把加载、预热、Graph 捕获及诊断排除在计时外。DFlash 四模式各正式测三轮、旋转顺序并取中位数，还保留范围与源码记录；ShareGPT 和多卡每配置只有一次正式测量，我只报告当次观察，不声称有稳定置信区间。重复测量、正确性与可追溯性提供不同证据，不能相互代替。
+
+**三方法正式测量的具体口径：** 十二条唯一输入在每轮各执行一次，GSM8K / HumanEval / MT-Bench 各四条，平均输入 120.33 Token；每请求 256 输出，三轮。七种投机模式各 36 次生成，加上三个 Draft 进程各自 36 次 AR，共 360 次执行、92,160 输出 Token。252 是投机执行次数，不是 252 条独立 Prompt。每轮吞吐为 `12×256 / 十二请求累计耗时`，再取中位数；加速比取同轮配对比值中位数，不能把每个 Prompt 的加速比直接平均。所有 252 组投机输出和跨进程/跨轮 AR 均一致。
+
+**项目实际实现补充：** [validate_inputs()/_worker()/collect_report()](../experiments/speculative_compare/benchmark.py) 锁定权重、源码与输入，轮换模式顺序并保存原始 Token；[prepare_legacy_formal.prepare()](../experiments/speculative_compare/prepare_legacy_formal.py) 核对通过回归的计算源码，仅扩大请求和轮数、关闭 Top-2。新路径计时包括 Prefill、Draft、Target、接受/回滚和必要主机同步；未测 Serving TTFT/ITL，也未做任务答案评分。见 [正式报告](../results/speculative_compare/legacy-target-formal-20261021/README.md)。
 
 **深入解释：** 首次 Triton 编译、Graph 捕获、初始化和正式生成不是同一种成本。若目标是生成稳态性能，应预热后测；若目标是冷启动，则要另设指标，不能偷偷混入某个模式。请求时延包含排队，总耗时从开始处理整组到全部完成，二者不能互换。三轮中位数能减弱一个异常值影响，但样本仍少，既没有覆盖多台机器，也不构成生产负载保证。
 
@@ -636,6 +652,8 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 
 **具体例子：** AR 本轮只有 1 个真实行，DFlash 验证有 16 行；固定 Linear 行数 32 时，两者都在该算子内部补到 32 再裁回真实行。补行不会成为 Token，不进入 Attention/KV/采样。FP32 LM Head 的额外权重副本占 2,489,319,424 bytes，因此权重存储、运行峰值都要纳入这个成本。
 
+**三种 Draft 对照如何接 FP16：** 三个官方 Draft 仍为 BF16，Target 的五层特征在 [install_draft_feature_bridge()](../experiments/speculative_compare/precision.py) 的 `draft.fc` 边界转换为 BF16，不更改 Target KV。HF FP16 短回归曾达到 20/21，仍有 Confidence 0.8 的 `mt-bench:9` 在索引 24 分叉。最终 [LegacyTarget](../experiments/speculative_compare/legacy_target.py) 复用旧 Target 的固定 Linear/RMS/激活、逐 Query PagedAttention、真实 FP32 Head，并关闭 TF32 和两种 reduced reduction；Draft SDPA 限定 MATH。组合配置通过十二输入三轮，未证明 FP16 是唯一原因。新 AR 同样执行此配置，不借用旧 HF 基线。
+
 **常见追问与边界：** BF16 与 FP16 都是 16 bit，选择 FP16 不是节省一半显存。当前 FP16 Target 是已验收配置的延续，数值通过也依赖算术与状态修正，不是单靠 dtype。若迁移 BF16，要检查 dtype 断言、KV、算子和 Draft 特征转换，再重新做完整生成对照；该最终配置的 BF16/FP16 性能与质量消融未完成。
 
 #### 31. 生成分叉时，怎么区分 KV 状态错误与浮点数值差异？
@@ -650,17 +668,23 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 
 **具体例子：** 一个纯数值示例：同一历史下两个最大 Logits 为 10.000 与 9.999，微小扰动就可能交换大小；这解释了“误差小却 Token 不同”的可能性，但还需排除错页、错位置等原因。正式 TP 同历史检查 `max_abs=0.08344、relative_RMSE=0.001803`，通过预设 `0.35/0.01` 阈值；完整生成却只有 47/48 序列一致。这两个结果并不矛盾，后者也没有被前者抹掉。
 
+**实际数值排查案例：** 旧 Smoke 的 `humaneval:19` 第 5 轮，Target 在位置 139/140 验证 `[6337,429]`。实际 BF16 Head 对 Token 5980 与 429 均算出 31.625，真实 argmax 为 429；相同 Hidden State 的 FP32 Head 得分分别为 31.637157、31.575722，恢复为 5980。按原提议/验证/crop 历史重放，36 层 K/V 与现场逐元素相同；按 AR 单步重建却不同，支持“分块数值历史和 Head 并列参与了这个位置分叉”的解释，未发现随机 Cache 污染。诊断记录见 [局部控制实验](../results/speculative_compare/diagnostic-20261019/README.md)。
+
+只提高 Head 后，新的短回归在索引 15 仍分叉；HF FP16 短回归也只达 20/21。后者没有保存失败位置的 Top-2，不能把旧索引 26 的并列套用过去。最终接回稳定 Target 后，短回归 21/21、正式 252/252；这是组合配置的实测修复，不是对原 HF 所有分叉的单因素归因，也不是证明任何输入都与原 HF AR 相同。原始失败均保留。
+
+**Cache 适配怎么保证语义：** `LegacyCache.get_seq_length()` 以已计算 Token 历史界定有效 KV；官方循环的 `crop(start)` 进入 `pool.trim()`，裁掉拒绝候选越界整页；每个 Query 的 `context_lens=position+1` 隔离保留页中的无效尾部。仅 Target Cache 工厂被适配，Draft DynamicCache 和有效 Target 特征截取仍由官方循环处理，请求 finally 释放 Target 页。本轮没有修补官方验证的某个已确诊索引错误。
+
 **常见追问与边界：** 当前 Graph 八组同历史检查精确一致、24 次完整生成通过，是已测形状和负载的证据。TP 那条生成分叉尚未定位；旧 Flash Prefill 完整模型分叉也未被参考配置证明修复。有限值、文本合理、局部算子 allclose、无页泄漏，都不能单独替代完整模型验收。
 
 #### 32. 哪些结论已经成立，哪些必须留给后续？
 
 **面试官问题：** 如果要继续做，先做什么？为什么现在还不能作为生产系统部署？
 
-**30 秒回答：** 当前最完整的是固定负载下 DFlash 与 Target Graph 的受控对照；Prefix 在同一 Chunk 配置上有收益，DP2 提升双卡总吞吐，1P1D 减少本轮最大停顿。负面结果也明确：Chunk 单独更慢，TP2 更慢且有生成分叉，AWQ 更慢。我会先补代表性负载、重复测量和 Profiling，再针对证据改热点，而不是继续叠加未经联合验证的功能。
+**30 秒回答：** 当前较完整的是 DFlash 与 Target Graph 四项对照，以及新三方法十二输入三轮对照；Prefix 在同一 Chunk 配置上有收益，DP2 提升双卡总吞吐，1P1D 减少本轮最大停顿。负面结果也明确：Chunk 单独更慢，TP2 更慢且有生成分叉，AWQ 更慢；新 DSpark 的 Confidence 截断也未提高整体吞吐。我会先补代表性负载、重复测量和 Profiling，再针对证据改热点，而不是继续叠加未经联合验证的功能。
 
-**深入解释：** 算法机制成立、代码存在、一次运行通过和生产可用是不同层次。生产需要更多模型/长度/并发/到达模式、自然 EOS、取消与故障处理、服务接口和长期资源测试。项目三条路径各自成立，不代表 DFlash、Graph、Prefix、Chunk、AWQ、TP、DP、PD 可以任意组合。当前“速度不错”的结论必须带上模型、精度、硬件、工作量、次数和比较对象。
+**深入解释：** 算法机制成立、代码存在、一次运行通过和生产可用是不同层次。生产需要更多模型/长度/并发/到达模式、自然 EOS、取消与故障处理、服务接口和长期资源测试。普通引擎、旧 Graph、分布式和新 Draft 适配各自验收，不代表 DFlash、Graph、Prefix、Chunk、AWQ、TP、DP、PD 可以任意组合。当前“速度不错”的结论必须带上模型、精度、硬件、工作量、次数和比较对象。
 
-**项目实际实现：** [PROJECT_SUMMARY 的证据与边界](PROJECT_SUMMARY.zh.md) 与四份 [results 摘要](../results/README.md) 是当前结论依据；[scripts/run.py](../scripts/run.py) 提供独立入口，不是联合服务配置。源码里的分支或开关，不能代替对应 GPU 运行证据。
+**项目实际实现：** [PROJECT_SUMMARY 的证据与边界](PROJECT_SUMMARY.zh.md) 与 [results 摘要](../results/README.md) 是当前结论依据；[scripts/run.py](../scripts/run.py) 提供独立入口，不是联合服务配置。源码里的分支或开关，不能代替对应 GPU 运行证据。
 
 **具体例子：** 若下一步研究 Prefix，应补 Full+Prefix 的 Prefix-only 对照，而不是把 Chunk+Prefix 当成它；若研究 1P1D，应单独设计异步 Handoff 与同步方案的相同双卡对照；若研究 DFlash，应先区分 Draft 串行提议、Target 验证和 CPU 状态开销，再决定是否做 Draft 合批或 Graph。这些是后续方案，不是已有成果。
 
@@ -676,6 +700,7 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 | ShareGPT | Qwen3-8B BF16＋FP32 Head；单 A100 40GB | 100 请求同时入队、驻留≤8、每请求 64 输出；每模式 1 次 | Full、Chunk、Chunk+Prefix 在固定调度负载下的取舍 |
 | Distributed | Qwen3-8B FP16＋FP32 Head；Single 一卡，其余双 A100 PHB | burst 32/stream 16，驻留总上限4、每请求64输出；每模式每负载1次 | 加卡扩展收益，以及相同双卡资源下的部署取舍 |
 | AWQ | 官方 Qwen3-8B-AWQ，FP16 激活＋FP32 Head；单 A100 40GB | short/long × batch1/4，每请求32输出；各3轮指标中位数 | 本量化实现的存储、显存与性能成本 |
+| 三种 Draft | Qwen3-8B 原 Target FP16＋FP32 Head，官方 BF16 Draft，MATH，无 Graph | GSM8K/HumanEval/MT-Bench 各4条，B=1，每条256输出，3轮 | 方法对照和同 DSpark checkpoint 的 Markov/Confidence 推理消融 |
 
 各实验都使用已说明的参考算术，关闭项和计时口径不同。以下表格只在同一实验内比较，不横向拼出一个“最终总加速比”。
 
@@ -719,8 +744,26 @@ DP2 对 Single 总吞吐 **+26.20% / +19.49%**，每卡效率下降；1P1D 对 D
 
 权重及量化元数据 **16,381,470,720→6,098,479,104 bytes，−62.772%**；加额外 FP32 Head 后 **18,870,790,144→8,587,798,528 bytes，−54.492%**。short-b1 运行峰值 allocated **19.873→10.314 GiB**，这三种口径不能混成一个“显存减少比例”。short-b1 耗时 **2.642→9.332 s**、吞吐 **12.111→3.429 tokens/s**，四个 case 均更慢。903 个 Checkpoint 张量全部消费、六项量化 Linear 参考检查通过，不等于完成自主 Calibration、量化质量无损或生成逐 Token 一致验证。[原始精选指标](../results/awq/summary.json)
 
-### 5.6 面试现场展示与诚实边界
+### 5.6 EAGLE3 DFlash DSpark 方法对照与推理消融
+
+下表时间为每轮十二条请求完整生成累计耗时的三轮中位数，吞吐包含 Prefill，不是纯 Decode 或 Serving 吞吐。三个 Draft 进程各自 AR 的吞吐约 16.17～16.24 tokens/s，累计耗时约 189～190 秒；AR 也驻留相应 Draft。
+
+| 模式 | tokens/s | 十二请求累计 s | 配对 AR Eager 加速 | 完整一致 |
+|---|---:|---:|---:|---:|
+| EAGLE3 | 47.260 | 65.002 | 2.934× | 36/36 |
+| DFlash | 56.407 | 54.461 | 3.479× | 36/36 |
+| DSpark No Markov | 34.283 | 89.608 | 2.111× | 36/36 |
+| DSpark Markov Only | 63.180 | 48.623 | 3.898× | 36/36 |
+| DSpark Fixed | 63.225 | 48.588 | 3.894× | 36/36 |
+| Confidence 0.5 | 61.839 | 49.677 | 3.823× | 36/36 |
+| Confidence 0.8 | 51.741 | 59.372 | 3.193× | 36/36 |
+
+三轮配对 Markov 开关收益 **+84.68%**；Confidence 0.5/0.8 相对 Fixed 为 **−1.97%/−18.16%**。配对比值的中位数不一定等于两个中位数之比。EAGLE3/DFlash/DSpark 峰值 allocated 约 23.18/24.57/24.72 GiB，包含不同 Draft 驻留，不能解释为同一个独立纯 AR 部署的显存增量。
+
+三个 checkpoint 训练和容量不同；本轮未实现树验证、并发 Serving、Graph 或任务答案评分。旧 z-lab b16 Graph 实验是另一组候选预算和负载，不能比较或相乘其倍数。HF 失败 → FP16 20/21 → 原 Target 回归 21/21 → 正式 252/252 的证据链完整保留，[详细结果与离线复算](../results/speculative_compare/legacy-target-formal-20261021/README.md)可供现场追问。
+
+### 5.7 面试现场展示与诚实边界
 
 优先展示 DFlash 四模式表，再讲一个 P/A/B/C 回滚例子和一次 Graph 元数据更新；分布式用同一张表同时说清总吞吐、每卡效率、Max 与 P99。被问到“为什么没提升”，先承认观察，再给可能机制和下一步验证方法，不把未 Profiling 的猜测说成结论。
 
-必须保留的边界：普通引擎、DFlash 独立运行时和分布式控制器不同；Qwen3-8B 是性能主模型；第三方基础、Draft 和 AWQ 有明确来源；正式配置没有验证所有功能联合启用；TP 分叉、旧 Flash Prefill 分叉未解决；AWQ 未加速；没有生产 HTTP/生产 vLLM 对照、PP、Draft Graph、异步 KV Handoff 或任务质量评测。完整数据与限制以 [PROJECT_SUMMARY.zh.md](PROJECT_SUMMARY.zh.md) 和 [results/](../results/README.md) 为准。
+必须保留的边界：普通引擎、旧 DFlash＋Graph、分布式控制器及新 Draft 串行适配不同；Qwen3-8B 是性能主模型；第三方基础、Draft 和 AWQ 有明确来源；正式配置没有验证所有功能联合启用；TP 分叉、旧 Flash Prefill 分叉未解决；AWQ 未加速；没有生产 HTTP/生产 vLLM 对照、PP、Draft Graph、异步 KV Handoff 或任务质量评测。完整数据与限制以 [PROJECT_SUMMARY.zh.md](PROJECT_SUMMARY.zh.md) 和 [results/](../results/README.md) 为准。

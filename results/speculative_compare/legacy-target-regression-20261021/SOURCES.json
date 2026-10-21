@@ -1,0 +1,25 @@
+{
+  "archive": "speculative-legacy-target-records.zip",
+  "archive_sha256": "6ab675e1b650d836ccac5d120d5bfbe14da3f27685456c8cdf84d34ed4a7c9c8",
+  "sha256": {
+    "run-config.json": "d2e9a419844a852a089fcec75f991a3928980ddcee61ba413ba6131ea8b0f5b7",
+    "lock.json": "9ca49cdde71ba26fb5a481fce9743f5c86880a037a880153a10408f8c982cd48",
+    "workload.json": "299af41fdcf90ae9f2f255463dcae721ea950b7a96dee496ae914ba5e61808f1",
+    "pip-freeze.txt": "a21847710141bac3e5ff7514be20ee2a9f0d2907e133f9ba91df8c432562fb1a",
+    "nvidia-smi.txt": "8d987f81824ba948e375561f0e238699f3ac2c5efb077c8e92f97c867e51957c",
+    "eagle3.log": "c5c22512bf76d7d85eb4f5b90bb7a1b4134e6d37d29f6a72fefa028eb9498a30",
+    "eagle3-environment.json": "ca949da38ef892125de799b1d390779bda84419f611ba702df7586032f5e28db",
+    "eagle3-records.jsonl": "8880177b01b4c576da66a15ec9daba846869575a2deec2b223c6f7f9fc83df15",
+    "eagle3-completed.json": "93b2b5d505d88d67c54bd0e60b27a21e3acb019e8dda704a715863e2701771f0",
+    "dflash.log": "01279852c60d5890c2a2a1ea784a977b183dc605ce175b7b7535d130d5bc3428",
+    "dflash-environment.json": "83f565af6f3764ec504a4cc783b5af81f781a51f99dc9aaa8eaf749584e3031a",
+    "dflash-records.jsonl": "063f023fcf97101cbbc1c5db08526a9e3b25b9467360a37135b124db0273e210",
+    "dflash-completed.json": "93b2b5d505d88d67c54bd0e60b27a21e3acb019e8dda704a715863e2701771f0",
+    "dspark.log": "0dcb2108c5494ba9bfcb87076b0bb792869117647a239a68b1769d2d8e06b0e5",
+    "dspark-environment.json": "0f9f1ef8a9af67eebf5cf0b022c6a28b4a3ab7b511f6b5bc502713cafd0118a0",
+    "dspark-records.jsonl": "8d6f002cc3c62c0230091cc2f9675695f7ef51b8252553ac127159803179358c",
+    "dspark-completed.json": "93b2b5d505d88d67c54bd0e60b27a21e3acb019e8dda704a715863e2701771f0",
+    "report.json": "8222c38f5a6a0214430a8054fa86ff26e3d6f9ed85c1df1d9bba43a192817fee",
+    "summary.csv": "3e4b7af2f1371585988b71a1bc81ec585e690510d0887381434524d3427d14f3"
+  }
+}

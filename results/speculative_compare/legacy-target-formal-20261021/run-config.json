@@ -1,0 +1,14 @@
+{
+  "lock": "/hy-tmp/minivllm-work/results/speculative-legacy-target-formal-20261021-015420Z-33RMvw/prepared/lock.json",
+  "output": "/hy-tmp/minivllm-work/results/speculative-legacy-target-formal-20261021-015420Z-33RMvw/measured",
+  "repeats": 3,
+  "max_new_tokens": 256,
+  "warmup_tokens": 32,
+  "target_head": "fp32",
+  "full_bf16_reduction": true,
+  "target_backbone": "fp16",
+  "full_fp16_reduction": true,
+  "target_backend": "legacy_minivllm",
+  "target_logit_diagnostics": false,
+  "started_utc": "2026-10-21T01:55:30.303177+00:00"
+}

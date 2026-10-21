@@ -1,0 +1,914 @@
+{
+  "index_base": 0,
+  "margin_evidence": "Target Top-2 traces in 30/30 executions; missing logits are not inferred",
+  "ar_cross_process_identical": true,
+  "summaries": [
+    {
+      "algorithm": "dflash",
+      "mode": "dflash",
+      "unique_requests": 3,
+      "repeats": 1,
+      "matching_executions": 3,
+      "matching_unique_all_repeats": 3,
+      "all_outputs_stable": true,
+      "common_prefix_min": 256,
+      "common_prefix_mean": 256,
+      "common_prefix_median": 256,
+      "failed_common_prefix_mean": null,
+      "failed_common_prefix_median": null
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.5",
+      "unique_requests": 3,
+      "repeats": 1,
+      "matching_executions": 3,
+      "matching_unique_all_repeats": 3,
+      "all_outputs_stable": true,
+      "common_prefix_min": 256,
+      "common_prefix_mean": 256,
+      "common_prefix_median": 256,
+      "failed_common_prefix_mean": null,
+      "failed_common_prefix_median": null
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.8",
+      "unique_requests": 3,
+      "repeats": 1,
+      "matching_executions": 3,
+      "matching_unique_all_repeats": 3,
+      "all_outputs_stable": true,
+      "common_prefix_min": 256,
+      "common_prefix_mean": 256,
+      "common_prefix_median": 256,
+      "failed_common_prefix_mean": null,
+      "failed_common_prefix_median": null
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_fixed",
+      "unique_requests": 3,
+      "repeats": 1,
+      "matching_executions": 3,
+      "matching_unique_all_repeats": 3,
+      "all_outputs_stable": true,
+      "common_prefix_min": 256,
+      "common_prefix_mean": 256,
+      "common_prefix_median": 256,
+      "failed_common_prefix_mean": null,
+      "failed_common_prefix_median": null
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_markov_only",
+      "unique_requests": 3,
+      "repeats": 1,
+      "matching_executions": 3,
+      "matching_unique_all_repeats": 3,
+      "all_outputs_stable": true,
+      "common_prefix_min": 256,
+      "common_prefix_mean": 256,
+      "common_prefix_median": 256,
+      "failed_common_prefix_mean": null,
+      "failed_common_prefix_median": null
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_no_markov",
+      "unique_requests": 3,
+      "repeats": 1,
+      "matching_executions": 3,
+      "matching_unique_all_repeats": 3,
+      "all_outputs_stable": true,
+      "common_prefix_min": 256,
+      "common_prefix_mean": 256,
+      "common_prefix_median": 256,
+      "failed_common_prefix_mean": null,
+      "failed_common_prefix_median": null
+    },
+    {
+      "algorithm": "eagle3",
+      "mode": "eagle3",
+      "unique_requests": 3,
+      "repeats": 1,
+      "matching_executions": 3,
+      "matching_unique_all_repeats": 3,
+      "all_outputs_stable": true,
+      "common_prefix_min": 256,
+      "common_prefix_mean": 256,
+      "common_prefix_median": 256,
+      "failed_common_prefix_mean": null,
+      "failed_common_prefix_median": null
+    }
+  ],
+  "by_unique_request": [
+    {
+      "algorithm": "dflash",
+      "mode": "dflash",
+      "case": "humaneval:19",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dflash",
+      "mode": "dflash",
+      "case": "humaneval:4",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dflash",
+      "mode": "dflash",
+      "case": "mt-bench:9",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.5",
+      "case": "humaneval:19",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.5",
+      "case": "humaneval:4",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.5",
+      "case": "mt-bench:9",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.8",
+      "case": "humaneval:19",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.8",
+      "case": "humaneval:4",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.8",
+      "case": "mt-bench:9",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_fixed",
+      "case": "humaneval:19",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_fixed",
+      "case": "humaneval:4",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_fixed",
+      "case": "mt-bench:9",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_markov_only",
+      "case": "humaneval:19",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_markov_only",
+      "case": "humaneval:4",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_markov_only",
+      "case": "mt-bench:9",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_no_markov",
+      "case": "humaneval:19",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_no_markov",
+      "case": "humaneval:4",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_no_markov",
+      "case": "mt-bench:9",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "eagle3",
+      "mode": "eagle3",
+      "case": "humaneval:19",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "eagle3",
+      "mode": "eagle3",
+      "case": "humaneval:4",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    },
+    {
+      "algorithm": "eagle3",
+      "mode": "eagle3",
+      "case": "mt-bench:9",
+      "repeat_indices": [
+        0
+      ],
+      "first_mismatch_by_repeat": [
+        null
+      ],
+      "common_prefix_by_repeat": [
+        256
+      ],
+      "matching_repeats": 1,
+      "ar_output_stable": true,
+      "speculative_output_stable": true
+    }
+  ],
+  "comparisons": [
+    {
+      "algorithm": "dflash",
+      "mode": "dflash",
+      "case": "humaneval:19",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dflash",
+      "mode": "dflash",
+      "case": "humaneval:4",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dflash",
+      "mode": "dflash",
+      "case": "mt-bench:9",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.5",
+      "case": "humaneval:19",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.5",
+      "case": "humaneval:4",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.5",
+      "case": "mt-bench:9",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.8",
+      "case": "humaneval:19",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.8",
+      "case": "humaneval:4",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_conf_0.8",
+      "case": "mt-bench:9",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_fixed",
+      "case": "humaneval:19",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_fixed",
+      "case": "humaneval:4",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_fixed",
+      "case": "mt-bench:9",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_markov_only",
+      "case": "humaneval:19",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_markov_only",
+      "case": "humaneval:4",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_markov_only",
+      "case": "mt-bench:9",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_no_markov",
+      "case": "humaneval:19",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_no_markov",
+      "case": "humaneval:4",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "dspark",
+      "mode": "dspark_no_markov",
+      "case": "mt-bench:9",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "eagle3",
+      "mode": "eagle3",
+      "case": "humaneval:19",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "eagle3",
+      "mode": "eagle3",
+      "case": "humaneval:4",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    },
+    {
+      "algorithm": "eagle3",
+      "mode": "eagle3",
+      "case": "mt-bench:9",
+      "repeat": 0,
+      "first_mismatch": null,
+      "common_prefix_tokens": 256,
+      "ar_token": null,
+      "speculative_token": null,
+      "verification_site": null,
+      "target_top2_margin": null,
+      "margin_status": "not_recorded_in_formal_jsonl"
+    }
+  ],
+  "pairwise": [
+    {
+      "left": "dflash/dflash",
+      "right": "dspark/dspark_conf_0.5",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dflash/dflash",
+      "right": "dspark/dspark_conf_0.8",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dflash/dflash",
+      "right": "dspark/dspark_fixed",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dflash/dflash",
+      "right": "dspark/dspark_markov_only",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dflash/dflash",
+      "right": "dspark/dspark_no_markov",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dflash/dflash",
+      "right": "eagle3/eagle3",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_conf_0.5",
+      "right": "dspark/dspark_conf_0.8",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_conf_0.5",
+      "right": "dspark/dspark_fixed",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_conf_0.5",
+      "right": "dspark/dspark_markov_only",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_conf_0.5",
+      "right": "dspark/dspark_no_markov",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_conf_0.5",
+      "right": "eagle3/eagle3",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_conf_0.8",
+      "right": "dspark/dspark_fixed",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_conf_0.8",
+      "right": "dspark/dspark_markov_only",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_conf_0.8",
+      "right": "dspark/dspark_no_markov",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_conf_0.8",
+      "right": "eagle3/eagle3",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_fixed",
+      "right": "dspark/dspark_markov_only",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_fixed",
+      "right": "dspark/dspark_no_markov",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_fixed",
+      "right": "eagle3/eagle3",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_markov_only",
+      "right": "dspark/dspark_no_markov",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_markov_only",
+      "right": "eagle3/eagle3",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    },
+    {
+      "left": "dspark/dspark_no_markov",
+      "right": "eagle3/eagle3",
+      "executions": 3,
+      "identical_outputs": 3,
+      "both_fail_ar": 0,
+      "same_first_fork": 0
+    }
+  ],
+  "source_sha256": {
+    "dflash-records.jsonl": "063f023fcf97101cbbc1c5db08526a9e3b25b9467360a37135b124db0273e210",
+    "dspark-records.jsonl": "8d6f002cc3c62c0230091cc2f9675695f7ef51b8252553ac127159803179358c",
+    "eagle3-records.jsonl": "8880177b01b4c576da66a15ec9daba846869575a2deec2b223c6f7f9fc83df15"
+  }
+}

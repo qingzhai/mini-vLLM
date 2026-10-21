@@ -23,3 +23,7 @@ venv*/
 build/
 dist/
 rendered/
+# Local rental/migration notes; reproducible experiment docs live elsewhere.
+/docs/NEXT_SESSION.zh.md
+# Full hardware inventories remain in the original local records ZIPs.
+/results/speculative_compare/**/nvidia-smi.txt

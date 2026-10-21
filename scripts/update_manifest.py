@@ -8,7 +8,9 @@ root = Path(__file__).resolve().parents[1]
 files = {}
 for base in ('src', 'experiments', 'scripts', 'tests', 'benchmarks', 'data', 'docs', 'results'):
     for p in sorted((root / base).rglob('*')):
-        if p.is_file() and '__pycache__' not in p.parts and p.suffix in ('.py', '.sh', '.json', '.md', '.csv'):
+        if (p.is_file() and '__pycache__' not in p.parts
+                and p.relative_to(root).as_posix() != 'docs/NEXT_SESSION.zh.md'
+                and p.suffix in ('.py', '.sh', '.json', '.md', '.csv')):
             files[p.relative_to(root).as_posix()] = hashlib.sha256(p.read_bytes()).hexdigest()
 for name in ('main.py', 'pyproject.toml', 'requirements-gpu.txt', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'README.md', 'docs/REPRODUCE.zh.md'):
     p = root / name

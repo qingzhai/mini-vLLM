@@ -1,0 +1,26 @@
+{
+  "archive": "speculative-legacy-target-formal-records.zip",
+  "archive_sha256": "ccf68dcc6969494e759f5d41c8bfc15fde6ff4ea529b083d753f09681c8c935b",
+  "sha256": {
+    "run-config.json": "47784580aa7ae06e217aeafff1f3bcad4a9191992ee597d54a900c9667ffa669",
+    "lock.json": "220da3e009af2eb6e76fb08bbb1bb084eebcf2f81635ac5c8c2aa84385bcf287",
+    "workload.json": "17fe9d15527c0a689ed6e560db5b21e0ba7e0f0fa5d0cc31ffe7801507bc7ea5",
+    "pip-freeze.txt": "a21847710141bac3e5ff7514be20ee2a9f0d2907e133f9ba91df8c432562fb1a",
+    "nvidia-smi.txt": "95e57bbb067435cac3fc9ac6e820632eb4024e5b0509a5a44025f88e1f1f58f4",
+    "eagle3.log": "3489f262f5fbf4bb88a55c42109961f909eb8d1362442526166f3abaa35774bd",
+    "eagle3-environment.json": "55817798841e0623285c2b240c99f4336f7c5ff3258bb0cd979774a54f28ec4c",
+    "eagle3-records.jsonl": "8ebadbfd5c5b9dc3a90134326aa6b339019dc39e8a683c7a4a47a04a60ff7753",
+    "eagle3-completed.json": "93b2b5d505d88d67c54bd0e60b27a21e3acb019e8dda704a715863e2701771f0",
+    "dflash.log": "6421cad3518dd0f63eb2601bf3d0d7a9322193acc5686d72a8a70ac2b9a60cf1",
+    "dflash-environment.json": "e1a93019c46d29d61f966b20fb287c45b139449c86c22adce5646b18cad29b5b",
+    "dflash-records.jsonl": "f6a12a588d6d6663840fd64143b731c9ccd75c26452e06b5f955644bc17d7fb1",
+    "dflash-completed.json": "93b2b5d505d88d67c54bd0e60b27a21e3acb019e8dda704a715863e2701771f0",
+    "dspark.log": "cec19c865294d5d30c28e6b102d0cb9a61276b1d8d32b4aae497846a273750d2",
+    "dspark-environment.json": "882bf378e2fa4b0861fcb1efbc75fc799d740edd90a0d14b4e1e5e815263b8e9",
+    "dspark-records.jsonl": "40b6d282314698b0084c7de3cbaefa0ac5a3b0a0ccf8ba1ca73eb5fdf9c93967",
+    "dspark-completed.json": "93b2b5d505d88d67c54bd0e60b27a21e3acb019e8dda704a715863e2701771f0",
+    "report.json": "b34fcb73b14d49c29d7ec4818c4bad40ebdf54ec7aa418883c6b811cfaaa8912",
+    "summary.csv": "12bfa73d7e3bb72296b5521e05f0fce424e7f7854d3e26625fb1cede6bbd6024",
+    "formal-selection.json": "5e3b5db11a211ae77218509ded5c62530a06c7d1827e26521bf908ddbbae70a3"
+  }
+}

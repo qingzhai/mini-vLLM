@@ -1,0 +1,21 @@
+{
+  "archive": "dspark-greedy-diagnostic-records.zip",
+  "archive_sha256": "60485a83f1d14dbed1efd9f98e1d7ef08099d3a07c5ecf4e49dda111bfc64d60",
+  "formal_benchmark": false,
+  "performance_measurement": false,
+  "sha256": {
+    "report.json": "a421c68d1eb852b2148fe2a73adbd99abfa9937fda6cd5771a5194ffd45b7f6a",
+    "run-config.json": "ea312606ae7294e2b551e2c668a7af3d512b3c7483ddbfdf46b8be4c3b7e8563",
+    "lock.json": "e458fc76a9b8907cad14e9e4eebb6c8cc7322b5f5772168c17c085b8c3d9f09e",
+    "workload.json": "76ce113bf0f9068b51633f2c2fbadf6e49a5938822c69eef5b0025dc16d8cab6",
+    "diagnose_greedy.py": "20e8ef15a5cf0b3c257b69c9e22b063563a730d89248f5a8b03f9c1d72340f5a",
+    "benchmark.py": "8d1dad06d95b64618eacf79843534b674c19f475b863b1a2df82565ce56af6ec",
+    "protocol.py": "29eee55e81a88877a7cfac4e01b5ec6c58f278529b97a7fe919bdd5fe31524e1",
+    "focus-tensors.pt": "3bf89f582ab823bd4d06f5f3ca5df40726630e99eb0dc5b8ce24c65558103dad"
+  },
+  "included_in_repository": [
+    "report.json",
+    "run-config.json"
+  ],
+  "unchanged_models_and_workload": true
+}

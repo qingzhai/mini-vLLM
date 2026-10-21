@@ -1,0 +1,38 @@
+{
+  "archive": "speculative-formal-records.zip",
+  "archive_sha256": "b32d41b981ebb3d1cd4e6cc0ad2b1d4b3f97954884c9bf9a22d99c116430fac0",
+  "source_run": "/hy-tmp/minivllm-work/results/speculative-formal-20261019-090231Z-cUSKhB/measured",
+  "formal_measurement": true,
+  "qualified_greedy_comparison": false,
+  "qualification_note": "Full measurement completed; seven speculative modes fail paired AR token equality. Internal paired-output ablations are reported separately.",
+  "original_file_sha256": {
+    "report.json": "6efcebb7f472e238ab7e1b751b7699c818528bfa3831aa192b465b7fd8587c58",
+    "summary.csv": "d411892ae2b37c2df84ad48e5c3280082d75e5ae65d86c1bd94233a5442eb5a7",
+    "run-config.json": "4cd3e86991eff9157e12caccf5951173eb513e7b8c59458a227790be00203726",
+    "lock.json": "220da3e009af2eb6e76fb08bbb1bb084eebcf2f81635ac5c8c2aa84385bcf287",
+    "workload.json": "17fe9d15527c0a689ed6e560db5b21e0ba7e0f0fa5d0cc31ffe7801507bc7ea5",
+    "pip-freeze.txt": "f7efde44cd935654e0e74b01aa66d50b0a8ddecbfbb68e58fbc7b0e49f8da189",
+    "nvidia-smi.txt": "6574000b9eb2312ba27e048d01643ce95c09d5382fb47c85b33cb4afa92a41eb",
+    "eagle3-records.jsonl": "f725ef42b87edbd6dd61a57dd68fa9b92a6985d9824111635f51121a2f89b98d",
+    "eagle3-environment.json": "877e46754a035b65039df451190ed5ef5b2919075f479f5d90b96d8aafd6492f",
+    "eagle3.log": "2721f07d780c9285d9dc920bf8d8e921cc4e36a2df5b6297f354a5f808c10142",
+    "eagle3-completed.json": "93b2b5d505d88d67c54bd0e60b27a21e3acb019e8dda704a715863e2701771f0",
+    "dflash-records.jsonl": "e5f1bd25169347e69941b16eff3b928fbff5d684a1e54f6d4579f078735c427e",
+    "dflash-environment.json": "dfb94818a5c50dc29fc7306fef4626b852136d1c5e438593dab06805e9e0a95c",
+    "dflash.log": "b53915ec9afc76fd99a044fcf5a9b887e3d2e263ac616c338f2b160ae886ebb6",
+    "dflash-completed.json": "93b2b5d505d88d67c54bd0e60b27a21e3acb019e8dda704a715863e2701771f0",
+    "dspark-records.jsonl": "562360e4be0e72a59148c631f7a9f88a0582c3503a5ad5d790712938831b6349",
+    "dspark-environment.json": "b684dfce954355524b9cfcbecc8e7b12816cbbe920bd55fea2672e7b9874553c",
+    "dspark.log": "ad72e886416fbc8cbf40b1c8a5e7853fc231bf0421eab3398336467bf9b871ff",
+    "dspark-completed.json": "93b2b5d505d88d67c54bd0e60b27a21e3acb019e8dda704a715863e2701771f0"
+  },
+  "source_harness_sha256": {
+    "run_formal.sh": "469af5820f91042179e0ebb8bcf47ca3c1b09c71d2bb0f264fad4359a57c274a",
+    "benchmark.py": "072791543ab091667115cb476a3f38f7ea29589a8f450ebd7149f3c004bc6ce4",
+    "SHA256.json": "c6f66d681d2aabe9d7d3d3365313506b5ba4961eeeeba1d1e08641e471ce723b",
+    "protocol.py": "29eee55e81a88877a7cfac4e01b5ec6c58f278529b97a7fe919bdd5fe31524e1",
+    "precision.py": "17952024f74e309bd29fe83c6215748de2b0df2e23e6a9834ee67e77fb868af6",
+    "prepare.py": "577d3100ea02063d8f152b0ac0ed8f09ca3879598a52b3625cbb213782709fef"
+  },
+  "analysis_sha256": "35c28482d3a9a6e82e70e0df036d632608e5314c54bcf40b823bf5afcf17ace1"
+}

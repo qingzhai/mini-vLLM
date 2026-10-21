@@ -1,0 +1,10 @@
+{
+  "lock": "/hy-tmp/minivllm-work/results/speculative-formal-20261019-090231Z-cUSKhB/prepared/lock.json",
+  "output": "/hy-tmp/minivllm-work/results/speculative-formal-20261019-090231Z-cUSKhB/measured",
+  "repeats": 3,
+  "max_new_tokens": 256,
+  "warmup_tokens": 32,
+  "target_head": "fp32",
+  "full_bf16_reduction": false,
+  "started_utc": "2026-10-19T09:04:57.670915+00:00"
+}

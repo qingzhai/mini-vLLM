@@ -1,0 +1,23 @@
+{
+  "archive": "deepspec-audit-20261019-080548Z.zip",
+  "archive_sha256": "a04f7cd76d0a11fd5016adbbcddc0415d872e5e16c3c2ad23ed3b9aec161f1ec",
+  "source_root": "results/gpu-smoke-20261019-070027Z/measured",
+  "selected_record": true,
+  "formal_benchmark": false,
+  "sha256": {
+    "dflash-environment.json": "0717e16ec3cd0083736962e28e807adbd3e9a6feb4fa82c9e811c9c445539fee",
+    "dflash-records.jsonl": "092f2ce11404429cf11a5fda98351cb284a3eb1fba504d9a7db5733ad1821cae",
+    "diagnostic-console.txt": "80238e12404c7ae496224d8d3084fa0ba478792bad3a159c9f13a819f7c8deb7",
+    "diagnostic-dspark-records.jsonl": "a67b829734055e28fd79b594cf12fdd3c2bf2c09a03a72ce1b2c5a71fede0be4",
+    "dspark-environment.json": "303deb4d4764760c2f94ba6dfb8d5e4c38ba8b864bdb5ad43c4c35eb578f575b",
+    "dspark-records.jsonl": "19a0bd4d79d90f2afc7f3c3329bf92bf24a1f3d0faacff74a1f72d329b5eb833",
+    "eagle3-environment.json": "0a5ae86570c3ee756aede7120808bc812dae2438e2baa0b3f822a83082fe2650",
+    "eagle3-records.jsonl": "0c1fb88ff96dc75b534cbba20f225c748645f3f4d70774d5f72e157c14abea79",
+    "lock.json": "e458fc76a9b8907cad14e9e4eebb6c8cc7322b5f5772168c17c085b8c3d9f09e",
+    "pip-freeze.txt": "f7efde44cd935654e0e74b01aa66d50b0a8ddecbfbb68e58fbc7b0e49f8da189",
+    "report.json": "b2563e812dc9c3f8d45c14a952ae6dfb733752079ae40870974a9e2694e0bdec",
+    "run-config.json": "59fe1ba34ed4f788489e35de67b4b01526e4da354a8d0750c0afa936041796cb",
+    "summary.csv": "75befced609e41102e940525b486b0302cb0e33bb39b4f7174703188051bd7db",
+    "workload.json": "76ce113bf0f9068b51633f2c2fbadf6e49a5938822c69eef5b0025dc16d8cab6"
+  }
+}

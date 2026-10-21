@@ -1,0 +1,119 @@
+{
+  "gpu": "NVIDIA A100-PCIE-40GB",
+  "gpu_total_gib": 39.4925537109375,
+  "torch": "2.9.1+cu128",
+  "cuda": "12.8",
+  "python": "/hy-tmp/minivllm-work/venv-deepspec/bin/python",
+  "python_base_prefix": "/usr",
+  "torch_source": "/usr/local/lib/python3.11/dist-packages/torch/__init__.py",
+  "pyvenv_config": "home = /usr/local/bin\ninclude-system-site-packages = true\nversion = 3.11.12\nexecutable = /usr/bin/python3.11\ncommand = /usr/local/bin/python -m venv --without-pip --system-site-packages /hy-tmp/minivllm-work/venv-deepspec\n",
+  "packages": {
+    "transformers": "5.10.2",
+    "huggingface-hub": "1.33.0",
+    "safetensors": "0.7.0",
+    "triton": "3.5.1",
+    "numpy": "2.4.4"
+  },
+  "target_dtype": "torch.bfloat16",
+  "draft_dtype": "torch.bfloat16",
+  "target_precision": {
+    "requested": "fp32",
+    "original_head_dtype": "torch.bfloat16",
+    "head_weight_dtype": "torch.float32",
+    "head_compute_dtype": "torch.float32",
+    "head_output_dtype": "torch.float32",
+    "backbone_dtype": "torch.bfloat16",
+    "added_parameter_bytes": 1244659712,
+    "tf32": false,
+    "bf16_reduced_precision_reduction": true,
+    "checkpoint_files_modified": false
+  },
+  "attention": "sdpa",
+  "graph": false,
+  "batch_size": 1,
+  "max_proposal_tokens": 7,
+  "target_layer_ids": [
+    1,
+    9,
+    17,
+    25,
+    33
+  ],
+  "draft_config": {
+    "transformers_version": "5.10.2",
+    "architectures": [
+      "Qwen3DSparkModel"
+    ],
+    "output_hidden_states": false,
+    "return_dict": true,
+    "dtype": "bfloat16",
+    "chunk_size_feed_forward": 0,
+    "is_encoder_decoder": false,
+    "id2label": {
+      "0": "LABEL_0",
+      "1": "LABEL_1"
+    },
+    "label2id": {
+      "LABEL_0": 0,
+      "LABEL_1": 1
+    },
+    "problem_type": null,
+    "vocab_size": 151936,
+    "hidden_size": 4096,
+    "intermediate_size": 12288,
+    "num_hidden_layers": 5,
+    "num_attention_heads": 32,
+    "num_key_value_heads": 8,
+    "head_dim": 128,
+    "hidden_act": "silu",
+    "max_position_embeddings": 40960,
+    "initializer_range": 0.02,
+    "rms_norm_eps": 1e-06,
+    "use_cache": true,
+    "tie_word_embeddings": false,
+    "rope_parameters": {
+      "rope_theta": 1000000,
+      "rope_type": "default"
+    },
+    "attention_bias": false,
+    "use_sliding_window": false,
+    "sliding_window": null,
+    "max_window_layers": 36,
+    "layer_types": [
+      "full_attention",
+      "full_attention",
+      "full_attention",
+      "full_attention",
+      "full_attention"
+    ],
+    "attention_dropout": 0.0,
+    "pad_token_id": null,
+    "bos_token_id": 151643,
+    "eos_token_id": 151645,
+    "_name_or_path": "/hy-tmp/minivllm-work/models/dspark",
+    "block_size": 7,
+    "confidence_head_with_markov": true,
+    "enable_confidence_head": true,
+    "markov_head_type": "vanilla",
+    "markov_rank": 256,
+    "mask_token_id": 151669,
+    "model_type": "qwen3",
+    "num_anchors": 512,
+    "num_target_layers": 36,
+    "target_layer_ids": [
+      1,
+      9,
+      17,
+      25,
+      33
+    ],
+    "output_attentions": false
+  },
+  "target_parameters": 8190735360,
+  "draft_parameters": 2371081729,
+  "target_parameter_bytes": 17626130432,
+  "draft_parameter_bytes": 4742163458,
+  "bf16_reduced_precision_reduction": true,
+  "baseline_resident_draft": true,
+  "confidence_recorder": false
+}

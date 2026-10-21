@@ -1,0 +1,27 @@
+Loading weights:   0%|          | 0/399 [00:00<?, ?it/s]Loading weights: 100%|██████████| 399/399 [00:00<00:00, 5822.20it/s]
+Loading weights:   0%|          | 0/64 [00:00<?, ?it/s]Loading weights: 100%|██████████| 64/64 [00:00<00:00, 5212.95it/s]
+WARMUP: dspark ar
+WARMUP: dspark dspark_no_markov
+WARMUP: dspark dspark_markov_only
+WARMUP: dspark dspark_fixed
+WARMUP: dspark dspark_conf_0.5
+WARMUP: dspark dspark_conf_0.8
+RESULT: dspark ar 0 gsm8k:456 1.430s 22.37 tokens/s
+RESULT: dspark dspark_no_markov 0 gsm8k:456 1.015s 31.54 tokens/s
+RESULT: dspark dspark_markov_only 0 gsm8k:456 0.348s 91.87 tokens/s
+RESULT: dspark dspark_fixed 0 gsm8k:456 0.348s 91.97 tokens/s
+RESULT: dspark dspark_conf_0.5 0 gsm8k:456 0.350s 91.43 tokens/s
+RESULT: dspark dspark_conf_0.8 0 gsm8k:456 0.348s 91.88 tokens/s
+RESULT: dspark dspark_no_markov 0 humaneval:19 1.158s 27.64 tokens/s
+RESULT: dspark dspark_markov_only 0 humaneval:19 0.415s 77.12 tokens/s
+RESULT: dspark dspark_fixed 0 humaneval:19 0.415s 77.07 tokens/s
+RESULT: dspark dspark_conf_0.5 0 humaneval:19 0.414s 77.31 tokens/s
+DIAG_REAL_R5 {'start': 139, 'cache_before': 139, 'query': [6337, 429], 'positions': [139, 140], 'argmax': 5980, 'top3': [(5980, 31.625), (429, 31.625), (382, 30.875)], 'logit_5980': 31.625, 'logit_429': 31.625, 'margin': 0.0}
+RESULT: dspark dspark_conf_0.8 0 humaneval:19 0.577s 55.47 tokens/s
+RESULT: dspark ar 0 humaneval:19 1.438s 22.25 tokens/s
+RESULT: dspark dspark_markov_only 0 mt-bench:11 0.960s 33.33 tokens/s
+RESULT: dspark dspark_fixed 0 mt-bench:11 0.963s 33.21 tokens/s
+RESULT: dspark dspark_conf_0.5 0 mt-bench:11 0.994s 32.19 tokens/s
+RESULT: dspark dspark_conf_0.8 0 mt-bench:11 1.203s 26.59 tokens/s
+RESULT: dspark ar 0 mt-bench:11 1.442s 22.20 tokens/s
+RESULT: dspark dspark_no_markov 0 mt-bench:11 1.319s 24.27 tokens/s
