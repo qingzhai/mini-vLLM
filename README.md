@@ -6,7 +6,7 @@
 
 ## 代表性技术工作与实验结果
 
-- **缓存与调度：** 扩展链式前缀复用、引用计数/LRU、Chunked Prefill 与混合调度。ShareGPT 派生 100 请求中，同一 Chunk 配置开启 Prefix，吞吐 **+20.23%**；Chunk 单独更慢。[正式报告](results/sharegpt/README.md)
+- **缓存与调度：** 扩展链式前缀复用、引用计数/LRU、Chunked Prefill 与混合调度。ShareGPT 派生 100 请求的四组统一 Decode-first 对照，各测三轮；启用 Prefix 相对 Full/Chunk-only 的配对吞吐分别 **+16.21% / +16.61%**，Chunk 的两组配对吞吐均下降。[四组正式报告](results/sharegpt/factorial-20261024/README.md)；旧三组单次测量的 **+20.23%** 单独保留为[历史结果](results/sharegpt/README.md)。
 - **投机执行与方法对照：** 原 DFlash 路径实现多请求 Target 批量验证、连续前缀接受、KV 回滚与 Target Graph；新路径通过 `LegacyTarget` 保留官方三种 Draft 的提议/接受逻辑，比较方法及 DSpark 推理策略。两套口径见下表。
 - **多 GPU：** 比较 Single/TP2/DP2/1P1D；双卡 DP2 对单卡的系统总吞吐 **+19%～26%**，每卡效率下降。1P1D 对 DP2 吞吐接近，最大 ITL **−89%～90%**，P99 未全面改善；TP2 显存约减半，但更慢且完整生成仅 47/48 一致。[正式报告](results/distributed/README.md)
 - **AWQ：** 官方 W4A16 权重适配与 Triton 量化 GEMM，权重及量化元数据存储 **−62.77%**；该比例不是整个运行峰值显存降幅，所测推理未加速。[正式报告](results/awq/README.md)
@@ -111,6 +111,8 @@ docs/                  复现说明、项目总结、简历项目经历
 
 ## 安装与运行
 
+已完成的 [ShareGPT 四组消融](results/sharegpt/factorial-20261024/README.md) 增加 Prefix-only，统一 Decode-first 并禁止 Full 隐式分块；四组各三轮通过输出一致性、历史参考、干净计时和页回收检查。独立入口为 `python scripts/run.py sharegpt-factorial`，默认各三轮；旧三组结果保持独立。[复现与迁移说明](docs/SHAREGPT_FACTORIAL.zh.md)。
+
 以下原引擎实验环境为 Linux、Python 3.11、NVIDIA GPU；实测 PyTorch 2.9.1+cu128、Triton 3.5.1、Transformers 4.57.3。双卡实验要求同机两张 GPU。新三种 Draft 对照另用 Transformers 5.10.2 的独立环境与[适配入口](experiments/speculative_compare/LEGACY_TARGET.zh.md)，不直接套用以下安装步骤。无需安装 vLLM。
 
 ```bash
@@ -150,13 +152,13 @@ python scripts/run.py decode -- --batch-sizes 1 --seq-lens 128 --iters 10 --warm
 
 新增 [EAGLE3 / DFlash / DSpark 对照](experiments/speculative_compare/README.md) 使用独立 DeepSpec 环境，官方 Draft 接入原 Mini-vLLM 稳定 Target。它按 Batch=1 串行执行，没有进入普通 Serving 调度器，也没有开启 Graph。原 HF BF16 / FP32 Head / HF FP16 的失败与诊断均保留，不能把最后通过解释成所有历史分叉已完成单因素归因。
 
-全部七种模式、配对基线、原始 Token 与离线复算见[正式报告](results/speculative_compare/legacy-target-formal-20261021/README.md)，运行协议见 [Target 适配说明](experiments/speculative_compare/LEGACY_TARGET.zh.md)。ShareGPT 与多卡每配置仅单次正式测量；Graph 与新三方法各测三轮，不能把测量次数混用。
+全部七种模式、配对基线、原始 Token 与离线复算见[正式报告](results/speculative_compare/legacy-target-formal-20261021/README.md)，运行协议见 [Target 适配说明](experiments/speculative_compare/LEGACY_TARGET.zh.md)。旧 ShareGPT 三组与多卡每配置仅单次正式测量；新 ShareGPT 四组、Graph 与三方法对照各测三轮，不能把测量次数混用。
 
 ## 实验范围
 
 正式跨模式正确性使用全阶段 per-query PagedAttention 和固定算术参考配置。原 Flash Prefill 的小规模算子检查不能替代完整模型正确性，相关数值分叉没有被本项目结果证明全部修复。DFlash Graph 仅覆盖 Target 前向，Draft 和初始 Prefill 在图外。TP2 按相同历史 logits 容差验收，自由生成一致率另列；量化尚无任务质量评测。没有验证所有功能同时启用。
 
-这次发布整理了既有通过实验的路径、共用文件和启动方式；CPU 检查覆盖目录迁移和状态合约，整理后的路径尚未重新执行 GPU 实验。原始记录中的性能数字对应其归档源码。
+发布整理保留了既有实验的路径、共用文件和启动方式；CPU 检查覆盖目录迁移和状态合约。2026-10-24 新增的 ShareGPT 四组路径已完成 GPU 正式测量与本地归档审查；其他历史路径未因本次整理而重新跑 GPU。性能数字均对应各自归档源码。
 
 ## 来源与项目经历
 

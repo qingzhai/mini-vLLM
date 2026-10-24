@@ -1,4 +1,6 @@
-# ShareGPT 调度对照：精选结果
+# ShareGPT 调度对照：历史三组精选结果（2026-10-11）
+
+后续已完成 [2026-10-24 四组正式消融](factorial-20261024/README.md)：补 Prefix-only、统一 Decode-first、四组各三轮，启用 Prefix 的两组配对吞吐收益为 +16.21%/+16.61%。本页 +20.23% 是旧协议单次结果，不与新表拼接。
 
 固定版本真实 ShareGPT 派生输入：80 个不同 prompt 加 20 个受控完整 prompt 重放，共 100 请求，50% short（256..512 tokens）和 50% long（1024..1536 tokens）；每请求 greedy 生成 64 tokens，忽略 EOS，同时入队，驻留上限 8。
 

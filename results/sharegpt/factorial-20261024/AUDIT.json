@@ -1,0 +1,19 @@
+{
+  "offline_audit_passed": true,
+  "gpu_rerun": false,
+  "measured_trials": 12,
+  "request_executions": 1200,
+  "generated_tokens": 76800,
+  "output_tokens_per_request": 64,
+  "historical_and_cross_mode_outputs_exact": true,
+  "all_replays_exact": true,
+  "per_request_and_trial_metrics_recomputed": true,
+  "archived_source_manifest_verified": true,
+  "tokenizer_file_differences": {
+    "tokenizer.json.download.curl.log": {
+      "historical": null,
+      "actual": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "note": "Checks archived observations; does not replace hardware profiling or general model-quality evaluation."
+}

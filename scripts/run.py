@@ -23,6 +23,7 @@ ENTRIES = {
     'dflash-graph': ('experiments/dflash_graph', 'benchmark.py'),
     'distributed': ('experiments/distributed', 'benchmark.py'),
     'sharegpt': ('experiments/sharegpt', 'bench_sharegpt.py'),
+    'sharegpt-factorial': ('experiments/sharegpt', 'bench_sharegpt.py'),
     'awq': ('experiments/awq', 'run.py'),
     'prefix': ('experiments/prefix', 'bench_prefix.py'),
     'chunked': ('experiments/chunked', 'bench_chunked.py'),
@@ -44,6 +45,8 @@ def main():
     args, extra = p.parse_known_args()
     if extra[:1] == ['--']:
         extra = extra[1:]
+    if args.experiment == 'sharegpt-factorial' and any(x.split('=')[0] == '--protocol' for x in extra):
+        p.error('sharegpt-factorial fixes the protocol; use sharegpt for historical modes')
     verify_source()
     work = (args.work_root or Path(os.environ.get('WORK_ROOT', REPO / '.work'))).expanduser().resolve()
     folder, script = ENTRIES[args.experiment]
@@ -80,18 +83,20 @@ def main():
     command = [sys.executable, '-u', str(package / script)]
     if args.experiment == 'distributed':
         command += ['--run-dir', str(run)]
-    elif args.experiment == 'sharegpt':
+    elif args.experiment in ('sharegpt', 'sharegpt-factorial'):
         command += ['--root', str(work), '--run-dir', str(run), '--model', env['MODEL_PATH'],
                     '--proof', str(REPO / 'data/sharegpt-reference')]
+        if args.experiment == 'sharegpt-factorial':
+            command += ['--protocol', 'factorial']
     command += extra
     print('Experiment:', args.experiment, '\nResults:', run, flush=True)
     if args.dry_run:
         print(json.dumps({'command': command, 'work_root': str(work),
                           'pythonpath': env['PYTHONPATH']}, ensure_ascii=False, indent=2))
         return 0
-    if args.experiment in ('sharegpt', 'distributed') and not Path(env['SHAREGPT_WORKLOAD']).is_file():
+    if args.experiment in ('sharegpt', 'sharegpt-factorial', 'distributed') and not Path(env['SHAREGPT_WORKLOAD']).is_file():
         p.error('Prepare the dataset first: python scripts/prepare_workload.py --work-root ' + str(work))
-    if args.experiment == 'sharegpt':
+    if args.experiment in ('sharegpt', 'sharegpt-factorial'):
         shutil.copy2(env['SHAREGPT_WORKLOAD'], run / 'workload.json')
     snapshot_sources(run / 'source')
     status = 1
@@ -117,7 +122,7 @@ def main():
                     os.killpg(child.pid, signal.SIGKILL)
                     child.wait()
                 status = 130
-        if status == 0 and args.experiment == 'sharegpt':
+        if status == 0 and args.experiment in ('sharegpt', 'sharegpt-factorial'):
             result = subprocess.run([sys.executable, str(package / 'summarize.py'), str(run)], env=env)
             status = result.returncode
     finally:

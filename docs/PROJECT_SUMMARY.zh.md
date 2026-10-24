@@ -28,7 +28,7 @@
 | 实验 | 精度与执行路径 | 正式次数 |
 |---|---|---:|
 | DFlash＋Graph | FP16 Target 主干＋FP32 LM Head，BF16 Draft，固定计算形状，全阶段 per-query PagedAttention | 每 case/模式 3 次，中位数 |
-| ShareGPT 调度 | BF16 主干＋FP32 LM Head，固定计算形状，全阶段 per-query PagedAttention，纯 Decode 使用 Graph | 每模式 1 次 |
+| ShareGPT 调度 | BF16 主干＋FP32 LM Head，固定计算形状，全阶段 per-query PagedAttention，纯 Decode 使用 Graph | 旧三组每模式 1 次；新四组各 3 轮，统一 Decode-first |
 | Single/TP2/DP2/1P1D | FP16 主干＋FP32 LM Head，固定计算形状，全阶段 per-query PagedAttention；Graph/DFlash/AWQ/Prefix/Chunk 关闭 | 每 case/模式 1 次 |
 | AWQ | FP16 激活＋FP32 LM Head，官方 AWQ W4A16 GEMM group128；Graph/Prefix/Chunk 关闭 | 每 case/模式 3 次，各指标中位数 |
 | 三种 Draft 对照 | 原 Target FP16＋FP32 Head、BF16 Draft、固定算术与 per-query PagedAttention；Draft SDPA MATH，无 Graph | 十二条输入，每模式 3 轮，配对比值中位数 |
@@ -69,6 +69,8 @@ Graph 仅覆盖 Target 前向，Draft、初始 Prefill、接受判断、回滚�
 
 ## 4. ShareGPT 调度对照
 
+### 4.1 历史三组（2026-10-11，单次测量）
+
 固定数据集 `heka-ai/sharegpt-english-10k-vllm-serving-benchmark`，revision `854a6eb3c310f07f9e8b269a735bf6fe547e543d`。80 个不同 prompt 加 20 个受控完整 prompt 重放，形成 100 请求；50 条短输入 256..512 tokens、50 条长输入 1024..1536 tokens。每请求 greedy 输出 64 tokens、忽略 EOS，100 请求同时入队，最多驻留 8；330 个 KV 页，每页 256 tokens。
 
 | 配置 | 总耗时 s | 平均 TTFT s | 平均 TPOT ms | 平均 E2E s | 输出 tokens/s | 输出序列一致 |
@@ -82,6 +84,23 @@ Graph 仅覆盖 Target 前向，Draft、初始 Prefill、接受判断、回滚�
 相对完整 Prefill，Chunk+Prefix 吞吐 +8.63%，但平均 TTFT +5.53%、E2E +7.47%；不能写为同时改善三项指标。20% 是人为构造的重复请求比例，不是天然共享前缀率。每模式只正式测一次，未评估运行间波动。原 Flash Prefill 没有用于本轮参考配置，本轮通过不能代表原 Flash 路径已修复。
 
 精选指标与来源摘要：[results/sharegpt](../results/sharegpt/README.md)。
+
+### 4.2 Chunk × Prefix 四组消融（2026-10-24，各三轮）
+
+复用完全相同的 100 条请求与每请求 64 输出，固定驻留上限 8、Token Budget 2048、330 页；四组统一 Decode-first，独立改变 Chunk/Prefix。关闭 Chunk 时一次处理完整未缓存后缀，预算不足则推迟，禁止隐式切块；Full/Prefix-only 可以和 Decode 混合。精度、固定算术与 per-query Attention 保持一致，纯 Decode 使用 Graph。每个 trial 冷前缀缓存，预热与诊断排除在计时外。
+
+| 模式 | 总耗时 s | 平均 TTFT s | 平均 TPOT ms | 平均 E2E s | 输出 Token/s | 吞吐三轮范围 |
+|---|---:|---:|---:|---:|---:|---|
+| Full Prefill | 146.063 | 72.652 | 137.668 | 81.358 | 43.817 | 43.730～48.810 |
+| Chunk-only | 146.871 | 72.339 | 130.844 | 80.582 | 43.576 | 39.465～44.046 |
+| Prefix-only | 119.207 | 66.258 | 112.804 | 73.364 | 53.688 | 50.819～56.369 |
+| Chunk+Prefix | 137.117 | 76.874 | 121.739 | 84.544 | 46.675 | 46.360～51.363 |
+
+各列为三轮指标中位数。主要效应采用同轮配对吞吐比的中位数：Full→Prefix-only **+16.21%**，Chunk-only→Chunk+Prefix **+16.61%**；Full→Chunk-only **−9.75%**，Prefix-only→Chunk+Prefix **−8.88%**。Prefix-only/Full 的吞吐中位数之比为 1.2253，是另一种统计量，不能改称配对收益 22.53%。
+
+Prefix 两组均复用 13,568/78,889=17.20% 输入 Token。12 次 trial、1200 次请求执行、76,800 个输出 Token，所有完整输出与历史参考及跨模式/跨轮一致，有限值、重放与页回收通过。离线复算逐请求和 trial 时间、吞吐及配对比值通过；Tokenizer 清单唯一差异为空下载日志，四个实际 Tokenizer 文件未变化。
+
+本轮 Prefix 在两种 Chunk 设置中均有吞吐收益，Chunk 在当前负载下两组配对结果均下降。三轮耗时存在约 10% 量级波动，顺序旋转但未完全位置平衡，没有 GPU profiling 来确定原因，也未评估更多到达模式。旧 +20.23% 仍是历史单次结果，不能与新协议拼表或相乘。[完整报告与来源](../results/sharegpt/factorial-20261024/README.md)。
 
 ## 5. Single、TP2、DP2 与单机 1P1D
 

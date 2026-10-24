@@ -14,7 +14,7 @@
 
 > 我基于开源 MinivLLM，围绕 Qwen3-8B 做推理执行和对照实验。模型和 Draft 使用官方权重，我主要完成调度扩展、执行适配、状态管理与验证。
 >
-> 缓存部分扩展 Prefix、LRU 和 Chunked Prefill，处理共享页、部分 Prefill 不采样和请求补位。ShareGPT 派生 100 请求中，同一 Chunk 配置开启 Prefix，吞吐提高约 20%；Chunk 单独却更慢。
+> 缓存部分扩展 Prefix、LRU 和 Chunked Prefill，处理共享页、部分 Prefill 不采样和请求补位。ShareGPT 派生 100 请求补齐四组消融，各测三轮并统一调度优先级；Prefix 在有、无 Chunk 时，配对吞吐都提高约 16%，Chunk 单独却更慢。
 >
 > 主要工程优化是 DFlash 加 Target CUDA Graph：实现批量验证、连续前缀接受、KV 回滚及固定缓冲。相对已有 Graph 的 AR，固定单请求和三请求总吞吐约为 2.99 倍、1.52 倍，三轮输出和接受轨迹一致。
 >
@@ -30,7 +30,7 @@
 >
 > 一条普通请求先分词成为 Sequence，进入等待队列。调度器根据请求数、Token Budget 和 KV 容量选窗口；ModelRunner 准备 Token、写缓存用的 Slot Mapping、读缓存用的 Block Table 和有效长度。Prefill 写入输入的 KV，最后位置预测首个输出。之后每轮输入刚生成但还没计算过的 Token，读取历史 KV，再预测下一个。结束时归还页引用，让等待请求补位。
 >
-> Prefix 避免重复算前缀：用包含历史的链式 Hash 找到已写完的整页，以引用计数保护共享页；引用归零先留缓存，覆盖物理页才驱逐。Chunk 把长 Prefill 拆小，让 Decode 穿插。600 个输入分成 256、256、88 三轮，前两轮只建 KV，最后才采样答案。100 请求对照里，Prefix 相对同一 Chunk 配置有效，但 Chunk 单独更慢，相对完整 Prefill 的平均时延也未全面改善。
+> Prefix 避免重复算前缀：用包含历史的链式 Hash 找到已写完的整页，以引用计数保护共享页；引用归零先留缓存，覆盖物理页才驱逐。Chunk 把长 Prefill 拆小，让 Decode 穿插。600 个输入分成 256、256、88 三轮，前两轮只建 KV，最后才采样答案。100 请求的四组对照统一 Decode-first，关闭 Chunk 时不允许偷偷切块，预算不够就推迟整段。四组各三轮后，Prefix 的两组配对吞吐收益约 16%；Chunk 的两组结果均下降，时延也未全面改善。
 >
 > DFlash 是主要优化。轻量 Draft 利用 Target 已算出的五层特征，对带 MASK 的块一次预测 15 个候选。多个请求的 Draft 在本项目仍逐个调用，Target 验证才合批。并行猜测不等于直接决定答案，最终由 Target 因果前向验证。
 >
@@ -167,19 +167,19 @@
 
 **常见追问与边界：** 这不是每一层都重新组 Batch，也不是承诺请求绝不等待。原 Scheduler 有抢占路径；当前 Chunk Scheduler 页耗尽时显式报错，不要混写成已实现同样的抢占策略。正式 ShareGPT 的驻留上限 8 是 ChunkScheduler 路径的实际约束。
 
-#### 8. ShareGPT 三种调度实验怎么设计，Prefix 的提升相对谁？
+#### 8. ShareGPT 四组消融怎么设计，Prefix 的提升相对谁？
 
-**面试官问题：** 你是不是只跑了 Prefill？20% 共享前缀是哪里来的？为什么 Chunk 单独更慢还要保留？
+**面试官问题：** 你是不是只跑了 Prefill？为什么要补 Prefix-only？20% 共享前缀是哪里来的？
 
-**30 秒回答：** 这是完整 Prefill 加 Decode 实验：100 条请求同时入队，每条真实生成 64 个 Token，最多驻留 8。80 个不同 ShareGPT Prompt 后追加 20 个受控完整 Prompt 重放，并非数据天然有 20% 共享率。Chunk 开 Prefix 后吞吐从 43.67 到 52.51 tokens/s，提高 20.23%；这个基线是 Chunk only。相对 Full Prefill 只提高 8.63%，平均 TTFT 和 E2E 反而更高，我会同时报告。
+**30 秒回答：** 这是完整 Prefill 加 Decode：100 条请求同时入队，每条真实生成 64 个 Token，驻留上限 8。80 个不同 ShareGPT Prompt 后追加 20 次受控完整重放，不是数据天然共享率。我补齐 Full、Chunk-only、Prefix-only、Chunk+Prefix 四组，统一 Decode-first，各测三轮。按同轮配对吞吐比的中位数，Prefix 相对 Full 提高 16.21%，在 Chunk 上提高 16.61%；Chunk 的两组对照均下降。我保留这些负面结果，而不把“支持 Chunk”说成任何负载都更快。
 
-**深入解释：** Full Prefill 用 Chunk Size 2048、Prefill-first，让本实验最长 1536-token Prompt 一次读完；Chunk only 改为 Size 256、Decode-first；Chunk+Prefix 在相同 Chunk 配置上只开缓存。因此第一组对照同时改变分块和优先级，第二组才隔离 Prefix。各模式冷启动自己的块管理器，使用相同输入、BF16 主干、FP32 Head、固定算术及 per-query PagedAttention，纯 Decode 使用 Graph。
+**深入解释：** 旧三组 Full 用 Prefill-first、Chunk 用 Decode-first，Full→Chunk 同时改变了分块与优先级，不能单独归因。新协议四组优先级、输入、精度、Token Budget、驻留和页预算相同，只变 Chunk/Prefix。关闭 Chunk 时一次计算完整未缓存后缀，预算不够就推迟，禁止用剩余预算隐式分块；但可以和 Decode 混合。每个 trial 重建冷前缀缓存，真实输入预热与 Graph 诊断不计时。旧单次实验的 +20.23% 仍保留，但不能把它与新 Prefix-only 拼成一张四组表。
 
-**项目实际实现：** [prepare_data.build_requests / validate_workload](../experiments/sharegpt/prepare_data.py) 固定版本、seed 42、首条非空 Human 消息和 Qwen Chat Template，选 40 短+40 长，再重放各 10 条；[bench_sharegpt.main 的 trial](../experiments/sharegpt/bench_sharegpt.py) 执行到所有请求完成、记录时间和 Trace，验收 100/100 序列一致、有限 Logits、页引用全部归还。每模式正式测一次。
+**项目实际实现：** [prepare_data.build_requests()/validate_workload()](../experiments/sharegpt/prepare_data.py) 固定数据版本、seed 42、首条 Human 消息和 Qwen Chat Template；[FactorialScheduler.schedule()](../experiments/sharegpt/factorial_scheduler.py) 实现统一优先级和整段接纳/推迟；[settings()/trial_order()/paired_effects()](../experiments/sharegpt/factorial_protocol.py) 固定两开关、轮次和统计口径；[bench_sharegpt.main() 的 trial()](../experiments/sharegpt/bench_sharegpt.py) 执行到请求全部完成。跨模式、跨轮和历史完整输出、重放及 KV 回收通过；[离线审查](../scripts/import_sharegpt_factorial.py) 从 ZIP 再核对输出和时间戳，不重新占 GPU。
 
-**具体例子：** 重放请求占比是 `20/100=20%`；实际复用输入是 `13,568/78,889=17.20%`，因为请求长度不同、按完整页复用且保留未缓存尾部，两者分母不同。正式总耗时 Full/Chunk/Chunk+Prefix 分别是 132.397/146.539/121.881 s，吞吐分别为 48.339/43.674/52.510 tokens/s。Chunk 形成 267 个部分 Prefill 块、188 个混合步骤，改变了各步的工作组成；部分块更多不等于总 Forward 次数更多。混合路径与调度成本可能影响耗时，尚无 Profiling 定位。
+**具体例子：** 每 trial 输出 `100×64=6400` 个 Token，四组总耗时中位数依次为 146.063、146.871、119.207、137.117 s；吞吐中位数为 43.817、43.576、53.688、46.675 Token/s。Prefix-only/Full 的三个同轮吞吐比为 1.1549、1.2253、1.1621，中位数是 1.1621，即 +16.21%；直接用 `53.688/43.817≈1.2253` 得到的是“吞吐中位数之比”，不能混称。重放请求 `20/100=20%`，实际输入复用 `13,568/78,889=17.20%`，两者分母不同。
 
-**常见追问与边界：** 上述成本是合理解释，尚无 Profiling 证明唯一瓶颈。`max_tokens=64, ignore_eos=True` 固定输出工作量；遇到 EOS 后仍真实前向与采样，不用 PAD 填满。计时包含排队，排除分词、模型加载、预热及 HTTP；一次测量不能说明稳定误差范围。尚无 Prefix-only 对照，也未证明原 Flash Prefill 完整模型分叉已修复。
+**常见追问与边界：** Chunk-only/Chunk+Prefix 分别发生 267/214 个部分 Prefill 块，而 Full/Prefix-only 没有部分 Prefill，也各有 49 个 mixed steps，所以不能把 mixed step 当成开启 Chunk 的证据。三轮耗时有约 10% 量级波动，顺序未完全位置平衡，未做 Profiling 定位唯一瓶颈。计时含排队，排除分词、加载、预热及 HTTP；不证明更多到达模式或原 Flash Prefill 路径已通过。[四组完整结果](../results/sharegpt/factorial-20261024/README.md)。
 
 
 ### C. DFlash、Pending、验证与 KV 回滚
@@ -636,7 +636,7 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 
 **面试官问题：** 你怎样避免把首次编译、预热、缓存状态或机器波动当成优化收益？
 
-**30 秒回答：** 我先固定模型、精度、输入 Token、输出长度、到达规则、并发和 KV 预算，再把加载、预热、Graph 捕获及诊断排除在计时外。DFlash 四模式各正式测三轮、旋转顺序并取中位数，还保留范围与源码记录；ShareGPT 和多卡每配置只有一次正式测量，我只报告当次观察，不声称有稳定置信区间。重复测量、正确性与可追溯性提供不同证据，不能相互代替。
+**30 秒回答：** 我先固定模型、精度、输入 Token、输出长度、到达规则、并发和 KV 预算，再把加载、预热、Graph 捕获及诊断排除在计时外。DFlash 四模式各正式测三轮、旋转顺序并取中位数，还保留范围与源码记录；新 ShareGPT 四组也各测三轮并保留范围；旧 ShareGPT 三组和多卡每配置仍只有一次正式测量。这些都不构成稳定置信区间。重复测量、正确性与可追溯性提供不同证据，不能相互代替。
 
 **三方法正式测量的具体口径：** 十二条唯一输入在每轮各执行一次，GSM8K / HumanEval / MT-Bench 各四条，平均输入 120.33 Token；每请求 256 输出，三轮。七种投机模式各 36 次生成，加上三个 Draft 进程各自 36 次 AR，共 360 次执行、92,160 输出 Token。252 是投机执行次数，不是 252 条独立 Prompt。每轮吞吐为 `12×256 / 十二请求累计耗时`，再取中位数；加速比取同轮配对比值中位数，不能把每个 Prompt 的加速比直接平均。所有 252 组投机输出和跨进程/跨轮 AR 均一致。
 
@@ -646,7 +646,7 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 
 **项目实际实现：** [benchmark.main()/summarize()](../experiments/dflash_graph/benchmark.py) 在正式前完成 Capture、8 组诊断和四模式预热，正式关闭有限值逐步诊断并旋转顺序；[DFlashRuntime.generate()](../experiments/dflash_graph/dflash_runtime.py) 同步 GPU 后开始计时，结束再同步。ShareGPT [trial()](../experiments/sharegpt/bench_sharegpt.py) 重建块管理器，以每模式冷前缀缓存测量，逐步同步记录 Token 时间；多卡 [Session/run_load()](../experiments/distributed/runtime.py) 包含控制器/RPC 与迁移。数据版本与选择由 [prepare_data](../experiments/sharegpt/prepare_data.py) 固定；[SOURCES.json](../results/dflash_graph/SOURCES.json) 等记录原始归档 SHA256，[repro.verify_source()/snapshot_sources()](../experiments/common/repro.py) 负责发布源码完整性和快照。
 
-**具体例子：** DFlash Graph 单请求三轮范围为 1.837～1.846 s，中位数约 1.846 s；三请求范围为 7.634～7.753 s，中位数 7.651 s。四图捕获另耗 3.533 s，不计入这组生成耗时。ShareGPT 的 121.881 s 是一次完整 100 请求生成窗口，不能称为“三轮平均”；分布式 0.1% 左右差异也不能据单次运行判定稳定胜负。
+**具体例子：** DFlash Graph 单请求三轮范围为 1.837～1.846 s，中位数约 1.846 s；三请求范围为 7.634～7.753 s，中位数 7.651 s。四图捕获另耗 3.533 s，不计入这组生成耗时。旧 ShareGPT 的 121.881 s 是一次完整 100 请求窗口，不能称为“三轮平均”；新四组的 Prefix-only 119.207 s 是三轮总耗时中位数，三轮范围 113.538～125.938 s；分布式 0.1% 左右差异也不能据单次运行判定稳定胜负。
 
 **常见追问与边界：** 数据集与 Draft/AWQ 固定 revision，基础模型保留 config/tokenizer 哈希，但历史完整基础 Checkpoint commit 未被归档，复现完整性仍有这个缺口。模型加载、分词、HTTP/网络均不在正式生成时延中。源码 Manifest 证明文件版本，不能证明代码没有 bug；新目录整理后的 CPU 检查也不等于重新完成 GPU 实验。
 
@@ -698,9 +698,9 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 
 **项目实际实现：** [PROJECT_SUMMARY 的证据与边界](PROJECT_SUMMARY.zh.md) 与 [results 摘要](../results/README.md) 是当前结论依据；[scripts/run.py](../scripts/run.py) 提供独立入口，不是联合服务配置。源码里的分支或开关，不能代替对应 GPU 运行证据。
 
-**具体例子：** 若下一步研究 Prefix，应补 Full+Prefix 的 Prefix-only 对照，而不是把 Chunk+Prefix 当成它；若研究 1P1D，应单独设计异步 Handoff 与同步方案的相同双卡对照；若研究 DFlash，应先区分 Draft 串行提议、Target 验证和 CPU 状态开销，再决定是否做 Draft 合批或 Graph。这些是后续方案，不是已有成果。
+**具体例子：** Prefix-only 已在四组统一调度实验中完成，下一步应扩展并发、到达与长度分布，而不是把现有 100 条请求结果泛化；若研究 1P1D，应单独设计异步 Handoff 与同步方案的相同双卡对照；若研究 DFlash，应先区分 Draft 串行提议、Target 验证和 CPU 状态开销，再决定是否做 Draft 合批或 Graph。这些是后续方案，不是已有成果。
 
-**常见追问与边界：** 未完成项包括：Prefix-only；更多并发/到达/输入输出长度及自然 EOS；双卡多轮统计；完整 Profiling；Draft 合批/Graph；异步 KV Handoff；PP；其他模型正式适配；所有功能联合验收；AWQ 自主校准/任务质量；最终参考配置 BF16/FP16 对照；生产 HTTP 服务与生产 vLLM 性能对比。说“尚未验证”比用其他表的数字推导不存在的结果更准确。
+**常见追问与边界：** 未完成项包括：更多并发/到达/输入输出长度及自然 EOS；双卡多轮统计；完整 Profiling；Draft 合批/Graph；异步 KV Handoff；PP；其他模型正式适配；所有功能联合验收；AWQ 自主校准/任务质量；最终参考配置 BF16/FP16 对照；生产 HTTP 服务与生产 vLLM 性能对比。说“尚未验证”比用其他表的数字推导不存在的结果更准确。
 
 ## 5. 实验结果与局限
 
@@ -709,7 +709,7 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 | 实验 | 模型与精度 | 负载与测量次数 | 可以回答的问题 |
 |---|---|---|---|
 | DFlash＋Graph | Qwen3-8B FP16 Target＋FP32 Head，BF16 官方 Draft；单 A100 40GB | 固定 1 请求/3 请求，每请求 256 输出；四模式各 3 轮中位数 | 本执行器已有 AR Graph 后，投机是否仍有收益 |
-| ShareGPT | Qwen3-8B BF16＋FP32 Head；单 A100 40GB | 100 请求同时入队、驻留≤8、每请求 64 输出；每模式 1 次 | Full、Chunk、Chunk+Prefix 在固定调度负载下的取舍 |
+| ShareGPT | Qwen3-8B BF16＋FP32 Head；单 A100 40GB | 100 请求同时入队、驻留≤8、每请求 64 输出；旧三组各 1 次，新四组各 3 轮 | 两套协议独立；新四组统一 Decode-first，隔离 Chunk/Prefix |
 | Distributed | Qwen3-8B FP16＋FP32 Head；Single 一卡，其余双 A100 PHB | burst 32/stream 16，驻留总上限4、每请求64输出；每模式每负载1次 | 加卡扩展收益，以及相同双卡资源下的部署取舍 |
 | AWQ | 官方 Qwen3-8B-AWQ，FP16 激活＋FP32 Head；单 A100 40GB | short/long × batch1/4，每请求32输出；各3轮指标中位数 | 本量化实现的存储、显存与性能成本 |
 | 三种 Draft | Qwen3-8B 原 Target FP16＋FP32 Head，官方 BF16 Draft，MATH，无 Graph | GSM8K/HumanEval/MT-Bench 各4条，B=1，每条256输出，3轮 | 方法对照和同 DSpark checkpoint 的 Markov/Confidence 推理消融 |
@@ -727,7 +727,7 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 
 主结论是相对 AR Graph 为 **2.987× / 1.523×**，总耗时降低 **66.52% / 34.34%**。三请求驻留上限 2，共 768 输出，吞吐是总输出而非单条速度。24 次运行、48 次请求执行、12,288 输出 Token 匹配，八组同历史前向精确一致；正式 Target 验证实际 Replay 且 Fallback=0，页全部归还。Draft 和初始 Prefill 仍在图外，资源同驻留，不能外推生产引擎优势或最低部署显存。[原始精选指标](../results/dflash_graph/summary.json)
 
-### 5.3 ShareGPT：Prefix 的基线不可换
+### 5.3 ShareGPT：历史三组与新四组分开报告
 
 | 配置 | 总耗时 s | 平均 TTFT s | 平均 E2E s | 平均 TPOT ms | 总输出 tokens/s |
 |---|---:|---:|---:|---:|---:|
@@ -735,7 +735,19 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 | Chunk only | 146.539 | 72.091 | 80.356 | 131.181 | 43.674 |
 | Chunk+Prefix | 121.881 | 68.250 | 75.134 | 109.267 | 52.510 |
 
-Prefix 对 **Chunk only** 吞吐 **+20.23%**；对 Full 为 **+8.63%**，但平均 TTFT **+5.53%**、E2E **+7.47%**，TPOT 也没有保持不变。三配置均完成完整 Prefill+Decode 并逐 Token 一致。20% 是受控重放请求占比，实际缓存复用为 **13,568/78,889=17.20%**。每模式一次，Full→Chunk 还同时改变优先级，未完成 Prefix-only。[原始精选指标](../results/sharegpt/summary.json)
+Prefix 对 **Chunk only** 吞吐 **+20.23%**；对 Full 为 **+8.63%**，但平均 TTFT **+5.53%**、E2E **+7.47%**，TPOT 也没有保持不变。三配置均完成完整 Prefill+Decode 并逐 Token 一致。20% 是受控重放请求占比，实际缓存复用为 **13,568/78,889=17.20%**。这是历史三组，每模式一次，Full→Chunk 还同时改变优先级；当时未完成 Prefix-only，后续四组已补齐。[原始精选指标](../results/sharegpt/summary.json)
+
+2026-10-24 新四组统一 Decode-first，补 Prefix-only，四组各三轮。各列是三轮中位数：
+
+| 模式 | 总耗时 s | 平均 TTFT s | 平均 TPOT ms | 平均 E2E s | 输出 Token/s |
+|---|---:|---:|---:|---:|---:|
+| Full Prefill | 146.063 | 72.652 | 137.668 | 81.358 | 43.817 |
+| Chunk-only | 146.871 | 72.339 | 130.844 | 80.582 | 43.576 |
+| Prefix-only | 119.207 | 66.258 | 112.804 | 73.364 | 53.688 |
+| Chunk+Prefix | 137.117 | 76.874 | 121.739 | 84.544 | 46.675 |
+
+同轮配对吞吐比中位数：Full→Prefix-only +16.21%，Chunk-only→Chunk+Prefix +16.61%，Full→Chunk-only −9.75%，Prefix-only→Chunk+Prefix −8.88%。四组完整输出与历史、跨模式、跨轮均一致。三轮耗时有约 10% 量级波动，保留逐轮范围与执行顺序，不只展示最佳值，也不把 +20.23% 换算成本轮结果。[正式报告和离线审查](../results/sharegpt/factorial-20261024/README.md)。
+
 
 ### 5.4 多卡：同时报告总吞吐与每卡效率
 

@@ -16,6 +16,8 @@ def main():
     p.add_argument('--work-root', type=Path, default=Path(os.environ.get('WORK_ROOT', ROOT/'.work')))
     p.add_argument('--model', type=Path)
     p.add_argument('--dataset-file', type=Path)
+    p.add_argument('--allow-tokenizer-metadata-difference', action='store_true',
+                   help='Require exact historical input tokens/config; retain actual tokenizer file hashes')
     args = p.parse_args()
     work = args.work_root.expanduser().resolve()
     output = work/'data/sharegpt-workload.json'
@@ -26,7 +28,7 @@ def main():
     if args.dataset_file:
         command += ['--dataset-file', str(args.dataset_file.expanduser().resolve())]
     subprocess.run(command, check=True)
-    load_workload(output)
+    load_workload(output, require_tokenizer_file_identity=not args.allow_tokenizer_metadata_difference)
     print('Selection and all token hashes match the historical 100-request workload:', output)
 
 

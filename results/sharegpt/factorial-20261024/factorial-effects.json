@@ -1,0 +1,58 @@
+{
+  "protocol": "sharegpt-chunk-prefix-2x2-v1",
+  "qualified_comparison": true,
+  "effects": [
+    {
+      "effect": "prefix_without_chunk",
+      "baseline": "full_prefill",
+      "candidate": "prefix_only",
+      "paired_throughput_ratios": [
+        1.1548667256519616,
+        1.2252956184334762,
+        1.1621010776905465
+      ],
+      "median_paired_throughput_ratio": 1.1621010776905465,
+      "throughput_change_percent": 16.21010776905465,
+      "qualified_comparison": true
+    },
+    {
+      "effect": "prefix_with_chunk",
+      "baseline": "chunked",
+      "candidate": "chunked_prefix",
+      "paired_throughput_ratios": [
+        1.1661359809993042,
+        1.063891848928515,
+        1.1826987876599047
+      ],
+      "median_paired_throughput_ratio": 1.1661359809993042,
+      "throughput_change_percent": 16.613598099930414,
+      "qualified_comparison": true
+    },
+    {
+      "effect": "chunk_without_prefix",
+      "baseline": "full_prefill",
+      "candidate": "chunked",
+      "paired_throughput_ratios": [
+        0.9023963667747257,
+        0.9944991383267912,
+        0.9024734477719164
+      ],
+      "median_paired_throughput_ratio": 0.9024734477719164,
+      "throughput_change_percent": -9.75265522280836,
+      "qualified_comparison": true
+    },
+    {
+      "effect": "chunk_with_prefix",
+      "baseline": "prefix_only",
+      "candidate": "chunked_prefix",
+      "paired_throughput_ratios": [
+        0.9112020019669229,
+        0.8634973561604619,
+        0.9184693767742322
+      ],
+      "median_paired_throughput_ratio": 0.9112020019669229,
+      "throughput_change_percent": -8.879799803307709,
+      "qualified_comparison": true
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-"""Single-GPU canonical arithmetic benchmark, separate from the Flash results."""
+"""Canonical ShareGPT measurement; legacy and factorial protocols stay separate."""
 import argparse
 import atexit
 import hashlib
@@ -41,17 +41,28 @@ def main():
     parser.add_argument('--root', required=True, type=Path)
     parser.add_argument('--run-dir', required=True, type=Path)
     parser.add_argument('--model', type=Path)
-    parser.add_argument('--repeats', type=int, default=1)
+    parser.add_argument('--protocol', choices=('legacy', 'factorial'), default='legacy')
+    parser.add_argument('--repeats', type=int)
     parser.add_argument('--proof', required=True, type=Path)
     args = parser.parse_args()
+    factorial = args.protocol == 'factorial'
+    if factorial:
+        from factorial_protocol import MODES as modes, PROTOCOL, settings, trial_order
+        mode_configs = {mode: settings(mode) for mode in modes}
+    else:
+        modes, PROTOCOL = MODES, 'sharegpt-legacy-three-mode'
+        mode_configs = {m: dict(chunk_size=2048 if m == 'full_prefill' else 256,
+                               decode_first=m != 'full_prefill',
+                               prefix_cache=m == 'chunked_prefix') for m in modes}
+    if args.repeats is None:
+        args.repeats = 3 if factorial else 1
     if not 1 <= args.repeats <= 5:
         raise ValueError('repeats must be between 1 and 5')
     repo = Path(__file__).resolve().parents[2]
     run_dir = args.run_dir
     source_hashes = check_source(repo)
-    workload = json.loads((run_dir / 'workload.json').read_text())
-    from prepare_data import validate_workload
-    validate_workload(workload)
+    from workload_support import load_workload, tokenizer_metadata_diff
+    workload = load_workload(run_dir / 'workload.json', require_tokenizer_file_identity=not factorial)
     proof, prior_rows = load_proof(args.proof, workload)
     requests = workload['requests']
     if len(requests) != 100:
@@ -106,7 +117,8 @@ def main():
     torch.set_default_dtype(torch.bfloat16)
     install_runner_hooks()
     install_kv_budget(proof['kv_pages'])
-    report = dict(schema_version=1, completed=False, measured_trials=[], warmups=[],
+    report = dict(schema_version=2 if factorial else 1, protocol=PROTOCOL,
+                  completed=False, measured_trials=[], warmups=[],
                   model=str(model_path), config=config, source_sha256=source_hashes,
                   environment=dict(python=platform.python_version(), torch=torch.__version__,
                                    cuda=torch.version.cuda, gpu=torch.cuda.get_device_name(0),
@@ -120,14 +132,27 @@ def main():
                   metric_scope='In-process engine execution with 100 simultaneous arrivals; excludes HTTP/network/tokenization/model loading',
                   precision_note='Cross-mode exact greedy parity is reported separately; functional completion alone does not establish numerical equivalence',
                   sampling=dict(method='greedy', output_tokens=64, ignore_eos=True),
-                  modes={m:dict(chunk_size=2048 if m=='full_prefill' else 256,
-                                decode_first=m!='full_prefill', prefix_cache=m=='chunked_prefix') for m in MODES})
+                  modes=mode_configs, mode_order=list(modes),
+                  factorial_claim=factorial,
+                  scheduler_policy='decode_first_for_all' if factorial else 'legacy_mode_dependent',
+                  old_performance_is_not_a_baseline=factorial)
+    report['workload_identity'] = dict(historical_input_tokens_exact=True,
+        historical_config_exact=True, tokenizer_files_exact=not tokenizer_metadata_diff(workload),
+        tokenizer_file_differences=tokenizer_metadata_diff(workload),
+        tokenizer_equivalence_outside_this_workload_verified=False)
     report_path = run_dir / 'report.json'
     save_json(report_path, report)
+    if factorial:
+        save_json(run_dir/'installed-packages.json', {
+            dist.metadata['Name']: dist.version for dist in importlib.metadata.distributions()
+            if dist.metadata['Name']})
     engine = None
     try:
         print('Initializing Qwen3-8B: BF16 core, FP32 LM head, batch limit 8, GPU 0', flush=True)
         engine = LLMEngine(config)
+        if factorial:
+            from factorial_scheduler import FactorialScheduler
+            engine.scheduler = FactorialScheduler(engine.scheduler)
         torch.set_default_device('cpu')
         runner, scheduler = engine.model_runner, engine.scheduler
         runner.model.eval()
@@ -160,9 +185,12 @@ def main():
             assert scheduler.is_finished()
             scheduler.block_manager = BlockManager(total_pages, 256)
             bm = scheduler.block_manager
-            bm.enable_prefix_caching = mode == 'chunked_prefix'
-            scheduler.chunk_size = 2048 if mode == 'full_prefill' else 256
-            scheduler.decode_first = mode != 'full_prefill'
+            mode_config = mode_configs[mode]
+            bm.enable_prefix_caching = mode_config['prefix_cache']
+            scheduler.chunk_size = mode_config['chunk_size']
+            scheduler.decode_first = mode_config['decode_first']
+            if factorial:
+                scheduler.chunk_enabled = mode_config['chunk_enabled']
             scheduler.trace.clear()
             scheduler.last_schedule = None
             monitor.clear()
@@ -216,17 +244,22 @@ def main():
                             partial += 1
                             assert item['completion_tokens_before'] == 0
                             assert item['seq_id'] not in event['sampled_seq_ids']
-                        if mode != 'full_prefill' and item['phase'] == 'prefill':
+                        if mode_config['chunk_size'] == 256 and item['phase'] == 'prefill':
                             assert item['end'] - item['start'] <= 256
+                        if factorial and not mode_config['chunk_enabled'] and item['phase'] == 'prefill':
+                            assert item['end'] == item['prompt_tokens'], 'Atomic Prefill was split'
                         item['request_id'] = req_by_id[item['seq_id']]['request_id']
-                assert (partial == 0 and mixed == 0) if mode == 'full_prefill' else (partial > 0 and mixed > 0)
-                if mode == 'chunked_prefix':
+                if factorial:
+                    assert (partial > 0 and mixed > 0) if mode_config['chunk_enabled'] else partial == 0
+                else:
+                    assert (partial == 0 and mixed == 0) if mode == 'full_prefill' else (partial > 0 and mixed > 0)
+                if mode_config['prefix_cache']:
                     assert bm.stats['cache_hit_tokens'] > 0, 'No prefix reuse occurred'
                 else:
                     assert bm.stats['cache_hit_tokens'] == 0
                 if measured:
                     expected_hits = sum(((r['prompt_tokens']-1)//256)*256 for r in requests[80:])
-                    assert bm.stats['cache_hit_tokens'] == (expected_hits if mode=='chunked_prefix' else 0)
+                    assert bm.stats['cache_hit_tokens'] == (expected_hits if mode_config['prefix_cache'] else 0)
                 by_id = {r['request_id']:r for r in rows}
                 replay_rows = [r for r in requests if r.get('repeated_from')]
                 replay_matches = sum(by_id[r['request_id']]['output_token_ids'] ==
@@ -243,7 +276,9 @@ def main():
                                cache_evictions=bm.stats['evictions'], all_pages_released=True,
                                finite_logits=True, new_graph_diagnostic_checks=len(new_checks),
                                timing_clean=len(new_checks)==0, replay_sequence_matches=replay_matches,
-                               replay_requests=len(replay_rows))
+                               replay_requests=len(replay_rows),
+                               deferred_atomic_prefills=sum(e.get('deferred_atomic_prefills', 0) for e in scheduler.trace),
+                               mode_config=dict(mode_config))
                 result = dict(summary=summary, requests=rows, graph_diagnostics_added=new_checks,
                               trace=scheduler.trace)
                 save_json(run_dir/f'{label}.json', result)
@@ -271,13 +306,13 @@ def main():
         report['graph_keys_warmed'] = sorted(runner._graph_checked)
         full_requests = requests
         requests = warmup_requests(full_requests)
-        for mode in MODES:
+        for mode in modes:
             entry = trial(mode, f'warmup-{mode}', False)
             report['warmups'].append(entry)
             save_json(report_path, report)
         requests = full_requests
         for repeat in range(1, args.repeats+1):
-            order = MODES if repeat % 2 else tuple(reversed(MODES))
+            order = trial_order(repeat) if factorial else (modes if repeat % 2 else tuple(reversed(modes)))
             for mode in order:
                 entry = trial(mode, f'round{repeat}-{mode}', True)
                 entry['repeat'] = repeat
@@ -286,7 +321,7 @@ def main():
         comparisons = []
         for repeat in range(1, args.repeats+1):
             baseline = json.loads((run_dir/f'round{repeat}-full_prefill.json').read_text())['requests']
-            for mode in MODES[1:]:
+            for mode in modes[1:]:
                 candidate = json.loads((run_dir/f'round{repeat}-{mode}.json').read_text())['requests']
                 comparisons.append(dict(repeat=repeat, mode=mode, **compare_sequences(baseline,candidate)))
         report['greedy_comparisons'] = comparisons
@@ -294,22 +329,26 @@ def main():
         report['baseline_repeat_comparisons'] = [dict(repeat=i, **compare_sequences(baseline_first,
             json.loads((run_dir/f'round{i}-full_prefill.json').read_text())['requests']))
             for i in range(2,args.repeats+1)]
-        report['all_exact_greedy'] = all(x['all_exact'] for x in comparisons)
+        report['all_exact_greedy'] = all(x['all_exact'] for x in
+                                        comparisons + report['baseline_repeat_comparisons'])
         report['all_timings_clean'] = all(x['summary']['timing_clean'] for x in report['measured_trials'])
         report['proof_comparisons'] = []
         for trial_entry in report['measured_trials']:
             mode=trial_entry['summary']['mode']
             rows=json.loads((run_dir/trial_entry['file']).read_text())['requests']
+            reference_mode = mode if mode in prior_rows else 'full_prefill'
             report['proof_comparisons'].append(dict(repeat=trial_entry['repeat'],mode=mode,
-                                                   **compare_sequences(prior_rows[mode],rows)))
-        report['matches_passed_configuration'] = all(x['all_exact'] for x in report['proof_comparisons'])
+                reference_mode=reference_mode, **compare_sequences(prior_rows[reference_mode],rows)))
+        report['matches_historical_reference_outputs'] = all(x['all_exact'] for x in report['proof_comparisons'])
+        if not factorial:
+            report['matches_passed_configuration'] = report['matches_historical_reference_outputs']
         report['all_replays_exact'] = all(x['summary']['replay_sequence_matches'] ==
                                          x['summary']['replay_requests'] == 20
                                          for x in report['measured_trials'])
         report['completed'] = True
         report['functional_checks_passed'] = True
         report['passed'] = (report['all_exact_greedy'] and report['all_timings_clean'] and
-                            report['matches_passed_configuration'] and report['all_replays_exact'])
+                            report['matches_historical_reference_outputs'] and report['all_replays_exact'])
         save_json(report_path, report)
         from summarize import write_summary
         write_summary(run_dir)
@@ -321,7 +360,8 @@ def main():
         assert report['passed'], 'Final measurement failed a parity/timing guard; see saved report'
         print('SHAREGPT FINAL CHECKS PASS: strict greedy equality, prior-run equality, clean timing and KV release', flush=True)
     except Exception:
-        report['completed'] = False
+        if not (factorial and report.get('functional_checks_passed')):
+            report['completed'] = False
         report['error'] = traceback.format_exc()
         save_json(report_path, report)
         raise

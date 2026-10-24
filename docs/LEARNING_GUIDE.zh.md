@@ -65,6 +65,8 @@ prompt → tokenizer → Sequence → waiting
 
 ## 八步阅读顺序
 
+新增的 ShareGPT 四组消融沿用普通引擎，在实验层使用 [FactorialScheduler.schedule()](../experiments/sharegpt/factorial_scheduler.py)，四组统一 Decode-first，只有 Chunk/Prefix 两个开关不同。读完基础调度和 Chunk 后，对照它怎样在关闭 Chunk 时整段接纳或推迟未缓存 Prefill，避免隐式切块；再读 [settings()/trial_order()/paired_effects()](../experiments/sharegpt/factorial_protocol.py) 与[正式结果](../results/sharegpt/factorial-20261024/README.md)。Prefix-only 已完成，不再属于待补实验；历史三组入口仍保留。
+
 按下面顺序读，不必从头通读全部源码。每一步用一个小例子讲明白，再进入下一步。
 
 ### 1. 跟踪一个请求的一生

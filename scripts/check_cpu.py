@@ -28,7 +28,8 @@ def main():
             ('experiments/speculative_compare', 'verify_cpu.py', []),
             ('experiments/speculative_compare', 'verify_divergence_cpu.py', []),
             ('experiments/speculative_compare', 'verify_legacy_formal_cpu.py', []),
-            ('experiments/speculative_compare', 'verify_restore_weights_cpu.py', [])]
+            ('experiments/speculative_compare', 'verify_restore_weights_cpu.py', []),
+            ('experiments/sharegpt', 'verify_factorial_cpu.py', [])]
     if args.transport:
         runs.append(('experiments/distributed', 'verify_transport_cpu.py', []))
     if args.tensor:
@@ -42,14 +43,12 @@ def main():
     report = dict(checked_at_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                   actual_gpu_execution=False, ast_files=len(python_files), checks=[], skipped=[])
     with tempfile.TemporaryDirectory() as folder:
-        if importlib.util.find_spec('xxhash') is not None:
-            sys.path.insert(0, str(ROOT/'experiments/common'))
-            from fixtures import synthetic_workload
-            fixture = Path(folder)/'synthetic-workload.json'
-            fixture.write_text(json.dumps(synthetic_workload()))
-            runs.append(('experiments/sharegpt', 'verify_cpu.py', [str(ROOT), str(fixture)]))
-        else:
-            report['skipped'].append('Actual scheduler checks require xxhash; install project dependencies')
+        # The current BlockManager uses stdlib BLAKE2b, not an xxhash dependency.
+        sys.path.insert(0, str(ROOT/'experiments/common'))
+        from fixtures import synthetic_workload
+        fixture = Path(folder)/'synthetic-workload.json'
+        fixture.write_text(json.dumps(synthetic_workload()))
+        runs.append(('experiments/sharegpt', 'verify_cpu.py', [str(ROOT), str(fixture)]))
         for folder_name, file_name, extra in runs:
             env = os.environ.copy()
             env['PYTHONPATH'] = os.pathsep.join(map(str, [ROOT/folder_name, ROOT/'experiments/common',

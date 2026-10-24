@@ -2,7 +2,7 @@
 
 ## 环境与模型
 
-GPU 路径实测 Linux、Python 3.11.14、Torch 2.9.1+cu128、Triton 3.5.1、Transformers 4.57.3、NVIDIA A100-PCIE-40GB。先按根 README 安装 `requirements-gpu.txt`。CPU 合约测试可使用 CPU Torch；没有执行 CUDA/NCCL 时不得将合约测试结果写成 GPU 正确性。
+GPU 路径实测 Linux、Python 3.11（历史实验 3.11.14，新 ShareGPT 四组 3.11.12）、Torch 2.9.1+cu128、Triton 3.5.1、Transformers 4.57.3、NVIDIA A100-PCIE-40GB。先按根 README 安装 `requirements-gpu.txt`。CPU 合约测试可使用 CPU Torch；没有执行 CUDA/NCCL 时不得将合约测试结果写成 GPU 正确性。
 
 统一使用 `WORK_ROOT` 保存模型、缓存和新结果，默认是仓库下的 `.work`。已有 AutoDL 目录可设置为原来的工作目录，不需要重新下载模型。模型位置也可用 launcher 的 `--model`、`--draft`、`--awq-model` 参数单独指定。普通引擎按目录名选择实现，Qwen 主模型目录的末级名称应保留 `Qwen3-8B` 或 `Qwen3-0.6B`。
 
@@ -20,7 +20,7 @@ python scripts/prepare_workload.py
 
 使用固定 dataset commit 和文件 SHA256，按 seed=42 的顺序选取 40 条短 prompt、40 条长 prompt，再追加 20 条受控完整 prompt 重放。共 100 请求，50% short、50% long；这不是自然线上前缀分布。只使用首条 human 消息，Qwen chat template 关闭 thinking。
 
-发布仓库不带原始对话或输入 token 列表。准备脚本在本地生成 workload，然后逐项核对 `data/sharegpt-selection.json` 的 source ID、row、长度、token 哈希、tokenizer/config 哈希及总请求哈希。允许用 `--dataset-file` 指定离线原始 train.json。Distributed 和 ShareGPT 入口共用此固定 workload。
+发布仓库不带原始 ShareGPT 对话或输入 token 列表。准备脚本在本地生成 workload，然后逐项核对 `data/sharegpt-selection.json` 的 source ID、row、长度、token 哈希、tokenizer/config 哈希及总请求哈希。允许用 `--dataset-file` 指定离线原始 train.json。Distributed 和 ShareGPT 入口共用此固定 workload。新的四组入口使用 `python scripts/prepare_sharegpt_factorial.py --work-root "$WORK_ROOT"`，要求全部输入 Token 和模型 config 精确相同，但单独记录 Tokenizer 文件清单差异；原归档的差异仅为空下载日志，详见[四组协议](SHAREGPT_FACTORIAL.zh.md)。
 
 ## 统一入口
 
@@ -28,6 +28,7 @@ python scripts/prepare_workload.py
 |---|---:|---|
 | `python scripts/run.py dflash-graph` | 1 | FP16 主干、FP32 Head、BF16 Draft；四模式各三轮，256 输出 tokens |
 | `python scripts/run.py sharegpt` | 1 | BF16 主干、FP32 Head、batch 8；三种调度各一轮，64 输出 tokens |
+| `python scripts/run.py sharegpt-factorial` | 1 | 同输入与精度，Full/Chunk-only/Prefix-only/Chunk+Prefix 各三轮；统一 Decode-first，64 输出 tokens |
 | `python scripts/run.py distributed` | 2 | FP16 主干、FP32 Head；single/TP2/DP2/1P1D 各两组负载 |
 | `python scripts/run.py awq` | 1 | FP16 与官方 W4A16 独立进程对照 |
 | `python scripts/run.py prefix` | 1 | BF16，前缀缓存、LRU 与参考算子检查 |

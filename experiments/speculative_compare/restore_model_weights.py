@@ -111,9 +111,13 @@ def main():
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--lock', type=Path, required=True)
     parser.add_argument('--workers', type=int, default=2, choices=(1, 2, 3, 4))
+    parser.add_argument('--models', nargs='+', choices=('target', 'eagle3', 'dflash', 'dspark'),
+                        help='Restore only selected models; default keeps the original four-model recovery')
     args = parser.parse_args()
     root = args.root.resolve()
     lock = json.loads(args.lock.read_text())
+    if args.models:
+        lock = dict(lock, models={name: lock['models'][name] for name in dict.fromkeys(args.models)})
     tasks = model_tasks(root, lock)
     print('Free GiB:', round(shutil.disk_usage(root).free / 1024**3, 2), flush=True)
     print('Original files:', len(tasks), '; concurrent downloads:', args.workers, flush=True)
@@ -130,14 +134,15 @@ def main():
             for future in futures:
                 future.cancel()
             raise
-    provenance = root / 'recovery-environment/weights-restored.json'
+    name = 'weights-restored-'+'-'.join(sorted(lock['models']))+'.json' if args.models else 'weights-restored.json'
+    provenance = root / 'recovery-environment' / name
     provenance.parent.mkdir(parents=True, exist_ok=True)
     provenance.write_text(json.dumps(dict(
         restored_at_utc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
         original_lock_sha256=sha256(args.lock),
         identity_policy='Exact original file SHA256; ModelScope master is transport, not a claimed immutable revision',
         files=sorted(restored, key=lambda row: row['path'])), ensure_ascii=False, indent=2) + '\n')
-    print('ALL FOUR MODELS RESTORED WITH ORIGINAL SHA256. No GPU benchmark started.', flush=True)
+    print('MODELS RESTORED WITH ORIGINAL SHA256:', ', '.join(lock['models']), '; no GPU benchmark started.', flush=True)
 
 
 if __name__ == '__main__':
