@@ -9,7 +9,7 @@
 - 仓库有四类实验执行路径。它们共用模型和部分算子，但调度状态、页所有权与 Graph 入口不同；新增三方法对照复用原 Target Eager，不进入普通 Serving 调度器。
 - 正确性先于吞吐：完整生成对照、同历史数值检查、页回收与实际执行计数分别提供不同证据。
 
-整体证据见 [项目总结](PROJECT_SUMMARY.zh.md)，实际启动入口见 [scripts/run.py](../scripts/run.py#L25)。
+整体证据见 [项目总结](PROJECT_SUMMARY.zh.md)，实际启动入口见 [scripts/run.py](../scripts/run.py)。
 
 ## 第一次阅读按这个顺序
 
@@ -26,14 +26,14 @@
 | 7 | [distributed/runtime.py](../experiments/distributed/runtime.py) 的 `run_load()`，先读内部 `admit()`、`schedule()`、`receive()`；[worker.py](../experiments/distributed/worker.py) 的 `main()`；[target.py](../experiments/common/target.py) 的 `forward()`、`pack()`、`unpack()` | DP 请求归哪卡？1P1D 何时传 KV？D 怎样按自己的物理页读取它？ |
 | 8 | [linear.py](../src/myvllm/layers/linear.py) 的四种 Parallel Linear；[awq_loader.py](../experiments/awq/awq_loader.py) 的 `load_awq_model()`；[awq_linear.py](../experiments/awq/awq_linear.py) 的 `forward()`、`_gemm()` | TP 切哪一维，何时通信？INT4 怎样变为参与矩阵乘的权重？ |
 
-上表这 18 个文件的核心部分已在代码行上一行加了简短中文注释。其中请求状态、块管理、调度、DFlash/Graph 和 AWQ 的小文件逐行覆盖；引擎、ModelRunner、Qwen、多卡控制器及共享 Target 则覆盖表中要读的关键函数，不要求先通读整个文件。空行、已有注释和多行字符串正文不额外插入注释。
+上表所列核心文件的关键部分已在代码行上一行加了简短中文注释。其中请求状态、块管理、调度、DFlash/Graph 和 AWQ 的小文件逐行覆盖；引擎、ModelRunner、Qwen、多卡控制器及共享 Target 则覆盖表中要读的关键函数，不要求先通读整个文件。空行、已有注释和多行字符串正文不额外插入注释。
 
 每读一个函数，先做三件事：找输入，找被修改的状态，再找返回值。遇到模型或 CUDA 调用，第一遍先把它看成“接收哪些张量、写哪些 KV、返回哪些特征”，不要立刻跳进所有底层实现。
 
 建议在纸上连续手推下面三段，确认自己理解了调用顺序：
 
 1. Prompt `[10,20,30]` 经 Prefill 预测 40：序列长度为 4，有效 KV 只有前三个位置；下一轮输入 40 才写它自己的 KV。
-2. Pending=P、候选 A/B/C、Target 后继预测 A/B/X/Y：新增输出 A/B/X，保留 KV P/A/B，X 留作下一轮 Pending。完整推演见 [面试问答第 12 题](INTERVIEW.zh.md)。
+2. Pending=P、候选 A/B/C、Target 后继预测 A/B/X/Y：新增输出 A/B/X，保留 KV P/A/B，X 留作下一轮 Pending。完整推演见 [面试问答第 12 题](INTERVIEW.zh.md#q12)。
 3. 页长 256、页表 `[4,9]`：逻辑位置 255 写 slot 1279，位置 256 写 slot 2304。换成 Graph 后地址缓冲不变，这些数值仍须每轮更新。
 
 读完前六项后，再用 [项目总结](PROJECT_SUMMARY.zh.md) 对照性能数字，用 [面试材料](INTERVIEW.zh.md) 练口述。不要从结果中的加速倍数反推自己已经理解实现。
@@ -63,9 +63,22 @@ prompt → tokenizer → Sequence → waiting
              追加 token → 继续 running / 完成并归还页
 ```
 
+## 基础执行与实验适配怎样对应
+
+| 阅读层次 | 入口或替换点 | 保留什么、改变什么 | 为什么这样设计 |
+|---|---|---|---|
+| 基础引擎 | `LLMEngine.step()` → `Scheduler/ModelRunner` | 建立请求、Token、页表和模型前向关系 | 先弄清生命周期，不把普通配置当成所有正式实验 |
+| Chunk 混合执行 | `ChunkScheduler.schedule()`、`chunked_step()` | 沿用 Sequence/BlockManager；增加窗口、部分 Prefill 不采样和补位 | 控制每步工作量与不同阶段混合 |
+| S1 四组调度 | [FactorialScheduler.schedule()](../experiments/sharegpt/factorial_scheduler.py) | 沿用普通引擎与页管理；四组统一 Decode-first，关闭 Chunk 时整段接纳或推迟 | 把分块与优先级分开，隔离 Prefix/Chunk 效应 |
+| S1 参考算术 | [install_model()/install_runner_hooks()](../experiments/sharegpt/canonical_runtime.py) | BF16 主干、FP32 Head、固定关键算子形状；逐 Query PagedAttention，纯 Decode Graph | 建立可比较的完整生成参考，代价是不代表原 Flash 路径的最快速度 |
+| G1 投机与 Graph | `DFlashRuntime`、`TargetGraphExecutor` | 独立 Request/PagePool、FP16 Target；Draft 逐请求，Target 验证合批 | 管理 Pending、候选、回滚及四个静态图桶 |
+| D1 官方三方法 | `LegacyTarget.forward()`、`LegacyCache.crop()` | 将官方提议/接受接口接到原 Target Eager；BF16 Draft；不进入普通 Serving | 保留算法逻辑，统一 Target 算术后比较方法与同 checkpoint 开关 |
+
+第一遍先读前两层，第二遍沿 S1 或 G1 的一条真实实验链展开，最后看 D1。运行时安装的 hook/替换会改变真正执行的函数，仅看模型类最初定义不够。
+
 ## 八步阅读顺序
 
-新增的 ShareGPT 四组消融沿用普通引擎，在实验层使用 [FactorialScheduler.schedule()](../experiments/sharegpt/factorial_scheduler.py)，四组统一 Decode-first，只有 Chunk/Prefix 两个开关不同。读完基础调度和 Chunk 后，对照它怎样在关闭 Chunk 时整段接纳或推迟未缓存 Prefill，避免隐式切块；再读 [settings()/trial_order()/paired_effects()](../experiments/sharegpt/factorial_protocol.py) 与[正式结果](../results/sharegpt/factorial-20261024/README.md)。Prefix-only 已完成，不再属于待补实验；历史三组入口仍保留。
+最新四组调度消融在第 3 步学习，基础执行与实验适配的区别见下面的映射表。按函数建立状态链后，再看结果与面试表达。
 
 按下面顺序读，不必从头通读全部源码。每一步用一个小例子讲明白，再进入下一步。
 
@@ -97,7 +110,9 @@ Prefix 哈希包含上一块哈希和本块 token；命中还检查 token 内容
 
 小练习：用 600-token prompt、chunk=256 画出 `[0,256)`、`[256,512)`、`[512,600)`；插入一个 Decode 请求，标注每轮 token budget、是否 mixed、采样行号及可复用整页数。再把 chunk 改为 128，对照 trace 中部分块和混合步骤数量；不要假设块更小就更快。
 
-这条路径验证了连续批处理和混合调度。正式 ShareGPT 结果里，Chunk 单独比完整 Prefill 慢，必须同时看执行次数与输出指标，见 [ShareGPT 结果](../results/sharegpt/README.md)。
+接着读 [FactorialScheduler.schedule()](../experiments/sharegpt/factorial_scheduler.py)：仍沿用上述执行器，但四组统一 Decode-first。关闭 Chunk 时，即使还剩 512 个预算，也不能将一个 700-token 未缓存后缀拆开，而应推迟整段；它与 Decode 同步执行仍算 mixed step。开启 Prefix 时先跳过已命中的完整页，再判断剩余窗口。
+
+再读 [settings()/trial_order()/paired_effects()](../experiments/sharegpt/factorial_protocol.py)。四组按两个独立布尔开关得到，不是四套不同算子。用 6400 个总输出除以每组总耗时得到吞吐，先按轮配对再取比值中位数；不要与直接相除两组吞吐中位数混用。最新结果中 Prefix 有收益、Chunk 的两组配对收益均为负，见 [S1 四组报告](../results/sharegpt/factorial-20261024/README.md)。旧三组保留作历史，不充当最新 Prefix-only 的运行时基线。
 
 ### 4. 学会读正确性与指标，而不是只看 PASS
 

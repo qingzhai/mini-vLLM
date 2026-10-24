@@ -1,44 +1,82 @@
 {
-  "scope": "Consolidation validation; not a new GPU experiment",
+  "schema_version": 2,
+  "scope": "Documentation and resume refresh; local CPU checks only",
+  "checked_at_utc": "2026-10-24T07:58:03.363088+00:00",
+  "based_on_commit": "8bbfa084316ca8df6f7bff3d480998895708eafb",
+  "revision_note": "Working-tree documentation refresh after the base commit; GPU records remain unchanged.",
   "actual_gpu_execution": false,
-  "ast_files": 73,
-  "unique_checks": [
-    {
-      "check": "tests/check_release.py",
-      "exit_status": 0
-    },
-    {
-      "check": "experiments/distributed/verify_cpu.py",
-      "exit_status": 0
-    },
-    {
-      "check": "experiments/distributed/verify_tensors_cpu.py",
-      "exit_status": 0
-    },
-    {
-      "check": "experiments/dflash_graph/verify_graph_executor_cpu.py",
-      "exit_status": 0
-    },
-    {
-      "check": "experiments/dflash_graph/verify_runtime_cpu.py",
-      "exit_status": 0
-    },
-    {
-      "check": "experiments/distributed/verify_transport_cpu.py",
-      "exit_status": 0
-    }
-  ],
-  "unique_unittest_cases": 19,
-  "original_core_python_files_unchanged": 25,
-  "unchanged_original_files_guarded": 39,
-  "regenerated_source_snapshot_verified": true,
-  "source_snapshot_contains_readme": true,
-  "eight_launcher_dry_runs_passed": true,
-  "historical_sharegpt_workload_and_runtime_hash_guards_passed": true,
-  "all_json_parsed": true,
-  "word_resume_visually_checked_pages": 1,
-  "skipped": [
-    "Actual scheduler checks require xxhash; install project dependencies"
-  ],
-  "gpu_results": "Refer to results/*/SOURCES.json for historical GPU records and SHA256"
+  "cpu_checks": {
+    "checked_at_utc": "2026-10-24T07:53:59.297882+00:00",
+    "actual_gpu_execution": false,
+    "ast_files": 100,
+    "checks": [
+      {
+        "check": "tests/check_release.py",
+        "exit_status": 0
+      },
+      {
+        "check": "experiments/distributed/verify_cpu.py",
+        "exit_status": 0
+      },
+      {
+        "check": "experiments/speculative_compare/verify_cpu.py",
+        "exit_status": 0
+      },
+      {
+        "check": "experiments/speculative_compare/verify_divergence_cpu.py",
+        "exit_status": 0
+      },
+      {
+        "check": "experiments/speculative_compare/verify_legacy_formal_cpu.py",
+        "exit_status": 0
+      },
+      {
+        "check": "experiments/speculative_compare/verify_restore_weights_cpu.py",
+        "exit_status": 0
+      },
+      {
+        "check": "experiments/sharegpt/verify_factorial_cpu.py",
+        "exit_status": 0
+      },
+      {
+        "check": "experiments/sharegpt/verify_cpu.py",
+        "exit_status": 0
+      }
+    ],
+    "skipped": [],
+    "passed": true
+  },
+  "documentation_checks": {
+    "local_links_checked": 330,
+    "broken_file_or_anchor_links": [],
+    "interview_questions": 32,
+    "stable_question_anchors": 32,
+    "priority_questions": 12,
+    "all_documentation_result_json_parsed": true
+  },
+  "resume": {
+    "canonical_source": "docs/RESUME.zh.md",
+    "exported_document": "docs/RESUME.zh.docx",
+    "source_sha256": "021a091f6e2de7a64b1d8d4492a9d27ce75ffc6b17c1d74a0c1a8c9925031dd5",
+    "document_sha256": "049556254066105db2a12a11f595d4f22c0197ab39dd334e88d9b3d66907df86",
+    "text_equality_checked": true,
+    "visually_checked_pages": 1,
+    "visual_check": "One rendered page; Chinese glyphs, layout and emphasized metrics inspected.",
+    "prefix_gain_percent": 22.53,
+    "prefix_gain_statistic": "ratio of three-round throughput medians: prefix_only / full_prefill",
+    "chunk_prefix_paired_gain_percent": 16.61,
+    "chunk_prefix_statistic": "median of within-round throughput ratios: chunked_prefix / chunked"
+  },
+  "latest_gpu_evidence": {
+    "path": "results/sharegpt/factorial-20261024/AUDIT.json",
+    "protocol": "sharegpt-chunk-prefix-2x2-v1",
+    "measured_trials": 12,
+    "note": "Archived GPU observations; not rerun during documentation refresh."
+  },
+  "historical_validation": {
+    "path": "docs/validation/consolidation-20261014.json",
+    "source_commit": "ea933d9",
+    "note": "Preserved verbatim. Historical skipped checks and file counts are not current validation status."
+  },
+  "source_manifest_refreshed_and_verified": true
 }

@@ -4,6 +4,21 @@
 
 贡献边界：上游已有模型、算子、Paged KV Cache 与基础 Continuous Batching；本项目在此基础上扩展完整页 Prefix/LRU、Chunk 混合调度、自定义 DFlash 接受/回滚与 Target Graph，并实现多卡实验控制器和 AWQ 适配。新三方法对照保留官方 Draft 提议、验证和接受函数体，由本项目适配 Target 前向、特征、分页 KV 接口及实验协议，不是独立研发或训练新的投机算法。具体调用边界见 [LegacyTarget](../experiments/speculative_compare/legacy_target.py)、[benchmark.worker()/_worker()](../experiments/speculative_compare/benchmark.py) 与[来源声明](../THIRD_PARTY_NOTICES.md)。
 
+<a id="experiment-index"></a>
+
+## 实验索引
+
+| 简称与状态 | 输入与执行范围 | 主要基线 | 主要观察 | 正式来源 |
+|---|---|---|---|---|
+| **S1 当前调度结论** | ShareGPT 100 请求、64 输出、四组各三轮、BF16＋FP32 Head | 同 Decode-first 的 Full/Chunk-only | Prefix-only/Full 吞吐中位数之比 +22.53%；两组 Prefix 配对收益 +16.21%/+16.61%；Chunk 配对收益为负 | [四组](../results/sharegpt/factorial-20261024/README.md) |
+| S0 历史调度记录 | 相同 100 输入、三组各一次 | Chunk-only；Full 的优先级另有不同 | 同 Chunk 开 Prefix +20.23%，不能与 S1 拼表 | [旧三组](../results/sharegpt/README.md) |
+| **G1 投机工程优化** | 固定单请求/三请求、256 输出、15 候选＋Pending、四模式各三轮 | AR Graph | DFlash＋Target Graph 为基线 2.99×/1.52× | [Graph 对照](../results/dflash_graph/README.md) |
+| **D1 方法对照与消融** | 十二输入、256 输出、最多 7 候选＋Pending、Batch=1、三轮、无 Graph | 各 Draft 进程配对 AR Eager | EAGLE-3/DFlash/DSpark Markov Only 为基线 2.93×/3.48×/3.90×；Markov +84.68%，Confidence 未加速 | [三方法](../results/speculative_compare/legacy-target-formal-20261021/README.md) |
+| M1 部署取舍 | ShareGPT 派生 burst/stream、64 输出、每负载各一次 | Single；双卡部署间比较用 DP2 | DP2 总吞吐 +19%～26%；1P1D 最大 ITL 降低，TP2 更慢且存在生成分叉 | [多卡](../results/distributed/README.md) |
+| Q1 量化验证 | short/long × batch1/4、32 输出、各三轮 | 相同负载 FP16 | 存储与显存下降，实际推理没有加速 | [AWQ](../results/awq/README.md) |
+
+这些简称只用于查找实验。倍数指“达到基线的多少倍”；增幅另用百分比。S1 的 +22.53% 是吞吐中位数之比，与 +16.21% 的同轮配对比值中位数不同。G1 与 D1 的 Draft、候选预算、负载和基线不同，不按倍数大小直接判算法优劣。
+
 ## 1. 完成范围
 
 | 模块 | 已完成和验证的内容 |
@@ -69,23 +84,7 @@ Graph 仅覆盖 Target 前向，Draft、初始 Prefill、接受判断、回滚�
 
 ## 4. ShareGPT 调度对照
 
-### 4.1 历史三组（2026-10-11，单次测量）
-
-固定数据集 `heka-ai/sharegpt-english-10k-vllm-serving-benchmark`，revision `854a6eb3c310f07f9e8b269a735bf6fe547e543d`。80 个不同 prompt 加 20 个受控完整 prompt 重放，形成 100 请求；50 条短输入 256..512 tokens、50 条长输入 1024..1536 tokens。每请求 greedy 输出 64 tokens、忽略 EOS，100 请求同时入队，最多驻留 8；330 个 KV 页，每页 256 tokens。
-
-| 配置 | 总耗时 s | 平均 TTFT s | 平均 TPOT ms | 平均 E2E s | 输出 tokens/s | 输出序列一致 |
-|---|---:|---:|---:|---:|---:|---:|
-| 完整 Prefill | 132.397 | 64.675 | 83.134 | 69.913 | 48.339 | 基线 |
-| Chunked | 146.539 | 72.091 | 131.181 | 80.356 | 43.674 | 100/100 |
-| Chunked＋Prefix | 121.881 | 68.250 | 109.267 | 75.134 | 52.510 | 100/100 |
-
-同一 Chunk 配置启用 Prefix：吞吐 +20.23%，平均 TTFT 72.091→68.250 s，平均 E2E 80.356→75.134 s；复用 13,568 个输入 tokens，占 78,889 输入 tokens 的 17.20%。Chunk/Chunk+Prefix 分别发生 267/214 个部分 Prefill 块、188/158 个混合步骤，最后页全部归还。
-
-相对完整 Prefill，Chunk+Prefix 吞吐 +8.63%，但平均 TTFT +5.53%、E2E +7.47%；不能写为同时改善三项指标。20% 是人为构造的重复请求比例，不是天然共享前缀率。每模式只正式测一次，未评估运行间波动。原 Flash Prefill 没有用于本轮参考配置，本轮通过不能代表原 Flash 路径已修复。
-
-精选指标与来源摘要：[results/sharegpt](../results/sharegpt/README.md)。
-
-### 4.2 Chunk × Prefix 四组消融（2026-10-24，各三轮）
+### 4.1 Chunk × Prefix 四组消融（2026-10-24，各三轮）
 
 复用完全相同的 100 条请求与每请求 64 输出，固定驻留上限 8、Token Budget 2048、330 页；四组统一 Decode-first，独立改变 Chunk/Prefix。关闭 Chunk 时一次处理完整未缓存后缀，预算不足则推迟，禁止隐式切块；Full/Prefix-only 可以和 Decode 混合。精度、固定算术与 per-query Attention 保持一致，纯 Decode 使用 Graph。每个 trial 冷前缀缓存，预热与诊断排除在计时外。
 
@@ -101,6 +100,22 @@ Graph 仅覆盖 Target 前向，Draft、初始 Prefill、接受判断、回滚�
 Prefix 两组均复用 13,568/78,889=17.20% 输入 Token。12 次 trial、1200 次请求执行、76,800 个输出 Token，所有完整输出与历史参考及跨模式/跨轮一致，有限值、重放与页回收通过。离线复算逐请求和 trial 时间、吞吐及配对比值通过；Tokenizer 清单唯一差异为空下载日志，四个实际 Tokenizer 文件未变化。
 
 本轮 Prefix 在两种 Chunk 设置中均有吞吐收益，Chunk 在当前负载下两组配对结果均下降。三轮耗时存在约 10% 量级波动，顺序旋转但未完全位置平衡，没有 GPU profiling 来确定原因，也未评估更多到达模式。旧 +20.23% 仍是历史单次结果，不能与新协议拼表或相乘。[完整报告与来源](../results/sharegpt/factorial-20261024/README.md)。
+
+### 4.2 历史三组（2026-10-11，单次测量）
+
+固定数据集 `heka-ai/sharegpt-english-10k-vllm-serving-benchmark`，revision `854a6eb3c310f07f9e8b269a735bf6fe547e543d`。80 个不同 prompt 加 20 个受控完整 prompt 重放，形成 100 请求；50 条短输入 256..512 tokens、50 条长输入 1024..1536 tokens。每请求 greedy 输出 64 tokens、忽略 EOS，100 请求同时入队，最多驻留 8；330 个 KV 页，每页 256 tokens。
+
+| 配置 | 总耗时 s | 平均 TTFT s | 平均 TPOT ms | 平均 E2E s | 输出 tokens/s | 输出序列一致 |
+|---|---:|---:|---:|---:|---:|---:|
+| 完整 Prefill | 132.397 | 64.675 | 83.134 | 69.913 | 48.339 | 基线 |
+| Chunked | 146.539 | 72.091 | 131.181 | 80.356 | 43.674 | 100/100 |
+| Chunked＋Prefix | 121.881 | 68.250 | 109.267 | 75.134 | 52.510 | 100/100 |
+
+同一 Chunk 配置启用 Prefix：吞吐 +20.23%，平均 TTFT 72.091→68.250 s，平均 E2E 80.356→75.134 s；复用 13,568 个输入 tokens，占 78,889 输入 tokens 的 17.20%。Chunk/Chunk+Prefix 分别发生 267/214 个部分 Prefill 块、188/158 个混合步骤，最后页全部归还。
+
+相对完整 Prefill，Chunk+Prefix 吞吐 +8.63%，但平均 TTFT +5.53%、E2E +7.47%；不能写为同时改善三项指标。20% 是人为构造的重复请求比例，不是天然共享前缀率。每模式只正式测一次，未评估运行间波动。原 Flash Prefill 没有用于本轮参考配置，本轮通过不能代表原 Flash 路径已修复。
+
+精选指标与来源摘要：[results/sharegpt](../results/sharegpt/README.md)。
 
 ## 5. Single、TP2、DP2 与单机 1P1D
 

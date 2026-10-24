@@ -28,14 +28,14 @@
 
 ## 新机器需要什么
 
-1. 本次代码包，包含原引擎、实验入口、历史输出参考和数据选择哈希；不要覆盖 OSS 恢复出的旧代码目录。
+1. 当前仓库生成的代码包，包含原引擎、实验入口、历史输出参考和数据选择哈希；不要覆盖 OSS 恢复出的旧代码目录。
 2. `Qwen3-8B` 原始未量化权重、config 和 tokenizer；本轮不需要三个 Draft，也不需要 AWQ 权重。
 3. 原 100 请求 `sharegpt-workload.json`，或固定版本 ShareGPT `train.json`。准备脚本先复用本地正确输入，缺失时才下载数据并按原选择生成；禁止以随机或合成输入代替。
 4. Python 3.11、PyTorch 2.9.1+cu128、Triton 3.5.1、Transformers 4.57.3。原 DeepSpec 的 Transformers 5.10.2 环境不能直接用于本轮。环境脚本新建 `venv-sharegpt`，继承镜像预装 Torch，不重新安装 Torch/CUDA。
 
 本轮按照单 A100 40GB 配置；保留原 330 页预算时不能直接换小显存卡而仍称为相同实验。50GB 数据盘只保留这轮模型、代码、输入和环境可以使用；留 100GB 更方便恢复旧文件和下载缓存。不要额外下载三个 Draft 占空间。
 
-OSS workspace 是保留旧代码、结果和恢复元数据的便利备份，**不是本轮必须重新下载的模型包**。此前仅确认 `workspace.tar.gz` 上传成功，模型包和最终校验清单可能不齐；不要调用要求全部模型归档完整的旧 `restore.sh`。恢复环境还要求镜像中的基础 Python/Torch 路径兼容。
+OSS workspace 是保留旧代码、结果和恢复元数据的便利备份，**不是本轮必须重新下载的模型包**。使用前核对自己的归档内容；历史会话只确认过 `workspace.tar.gz` 完成上传，不能据此认定模型包和最终清单齐全。不要调用要求全部模型包完整的旧 `restore.sh`。恢复环境还要求镜像中的基础 Python/Torch 路径兼容。
 
 ## 按顺序操作
 
@@ -44,13 +44,16 @@ OSS workspace 是保留旧代码、结果和恢复元数据的便利备份，**�
 在仓库根目录执行：
 
 ```bash
-python3 scripts/build_sharegpt_factorial_bundle.py
+BUNDLE="/tmp/minivllm-sharegpt-$(date -u +%Y%m%d-%H%M%SZ).zip"
+python3 scripts/build_sharegpt_factorial_bundle.py --output "$BUNDLE"
+echo "$BUNDLE"
 ```
 
-上传生成的 `minivllm-sharegpt-factorial-v1.zip` 到新服务器 `/hy-tmp/`。服务器解包：
+构建器拒绝覆盖已有 ZIP，因此每次使用不同文件名。将 `$BUNDLE` 上传到服务器 `/hy-tmp/`；下面将实际文件名设置为 `BUNDLE` 再解包，包内目录名固定不变：
 
 ```bash
-python3 -m zipfile -e /hy-tmp/minivllm-sharegpt-factorial-v1.zip /hy-tmp/
+BUNDLE=/hy-tmp/你上传的文件名.zip
+python3 -m zipfile -e "$BUNDLE" /hy-tmp/
 export WORK_ROOT=/hy-tmp/minivllm-work
 export REPO=/hy-tmp/minivllm-sharegpt-factorial-v1
 ```
@@ -76,6 +79,8 @@ mkdir -p "$WORK_ROOT"
 
 这里只恢复 workspace；当前代码继续使用独立的 `$REPO`，不要运行恢复出来的旧启动脚本。
 
+<a id="prepare-model-env"></a>
+
 ### 3. 准备 Qwen3-8B 和环境
 
 已有原权重时下载器只校验复用；缺失时从 ModelScope 获取目标文件，并逐文件核对已归档 SHA256，不下载 Draft：
@@ -88,7 +93,12 @@ python3 experiments/speculative_compare/restore_model_weights.py \
   --models target --workers 2
 
 export BASE_PYTHON=/usr/local/bin/python
-bash "$REPO/scripts/setup_sharegpt_env.sh"
+# 若要复用已有的匹配环境，先设置其 Python 绝对路径。
+# export SHAREGPT_PYTHON="$WORK_ROOT/venv-core/bin/python"
+if [ -z "${SHAREGPT_PYTHON:-}" ]; then
+  bash "$REPO/scripts/setup_sharegpt_env.sh"
+  export SHAREGPT_PYTHON="$WORK_ROOT/venv-sharegpt/bin/python"
+fi
 ```
 
 如果新镜像原始解释器路径不同，将 `BASE_PYTHON` 改为已安装上述 Torch 的那个 Python。脚本默认用阿里云 PyPI，只安装非 GPU 依赖；不调用 PyTorch 下载源，解析计划中若出现替换 GPU 依赖会停止。已有 `venv-core` 满足精确版本时，也可通过 `SHAREGPT_PYTHON` 使用它，跳过环境安装。
@@ -97,7 +107,8 @@ bash "$REPO/scripts/setup_sharegpt_env.sh"
 
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com
-"$WORK_ROOT/venv-sharegpt/bin/python" "$REPO/scripts/prepare_sharegpt_factorial.py" \
+unset HF_HUB_OFFLINE TRANSFORMERS_OFFLINE
+"${SHAREGPT_PYTHON:-$WORK_ROOT/venv-sharegpt/bin/python}" "$REPO/scripts/prepare_sharegpt_factorial.py" \
   --work-root "$WORK_ROOT"
 ```
 
@@ -118,8 +129,8 @@ echo "日志: $LAUNCH_LOG"
 tail -f "$LAUNCH_LOG"
 ```
 
-默认四组各三轮，不额外先跑一套 GPU Smoke。只做已有的模型预热与 Graph 键预热，将诊断排除在计时外。根据旧单次生成窗口预留约 30～60 分钟；这是预算估计，新调度的真实时间未知。出现错误先保留新目录，不重复启动覆盖现场。
+默认四组各三轮，不额外先跑一套 GPU Smoke。只做已有的模型预热与 Graph 键预热，将诊断排除在计时外。2026-10-24 本轮十二次正式生成累计约 27.3 分钟，不含加载、预热与其他准备；未来机器仍建议预留 30～60 分钟，这不是完成时间保证。出现错误先保留新目录，不重复启动覆盖现场。
 
-完成后输出 `EXIT STATUS` 和 `Records:` 的新 ZIP 路径。按 Ctrl+C 只退出 `tail`；下载 `*-records.zip` 后再关机。尚未取得结果前，不更新简历或历史报告中的性能结论。
+完成后输出 `EXIT STATUS` 和 `Records:` 的新 ZIP 路径。按 Ctrl+C 只退出 `tail`；下载 `*-records.zip` 后再关机。新运行需要先核验自己的完整结果，再更新结论；旧三组与 2026-10-24 四组的记录保持独立。
 
 本地 CPU 验证入口：`python3 experiments/sharegpt/verify_factorial_cpu.py`，使用明确标记的合成 Token，只检查调度、页状态和报表约束，不生成 GPU 性能数据。

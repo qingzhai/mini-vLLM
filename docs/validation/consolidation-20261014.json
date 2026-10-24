@@ -1,0 +1,44 @@
+{
+  "scope": "Consolidation validation; not a new GPU experiment",
+  "actual_gpu_execution": false,
+  "ast_files": 73,
+  "unique_checks": [
+    {
+      "check": "tests/check_release.py",
+      "exit_status": 0
+    },
+    {
+      "check": "experiments/distributed/verify_cpu.py",
+      "exit_status": 0
+    },
+    {
+      "check": "experiments/distributed/verify_tensors_cpu.py",
+      "exit_status": 0
+    },
+    {
+      "check": "experiments/dflash_graph/verify_graph_executor_cpu.py",
+      "exit_status": 0
+    },
+    {
+      "check": "experiments/dflash_graph/verify_runtime_cpu.py",
+      "exit_status": 0
+    },
+    {
+      "check": "experiments/distributed/verify_transport_cpu.py",
+      "exit_status": 0
+    }
+  ],
+  "unique_unittest_cases": 19,
+  "original_core_python_files_unchanged": 25,
+  "unchanged_original_files_guarded": 39,
+  "regenerated_source_snapshot_verified": true,
+  "source_snapshot_contains_readme": true,
+  "eight_launcher_dry_runs_passed": true,
+  "historical_sharegpt_workload_and_runtime_hash_guards_passed": true,
+  "all_json_parsed": true,
+  "word_resume_visually_checked_pages": 1,
+  "skipped": [
+    "Actual scheduler checks require xxhash; install project dependencies"
+  ],
+  "gpu_results": "Refer to results/*/SOURCES.json for historical GPU records and SHA256"
+}
