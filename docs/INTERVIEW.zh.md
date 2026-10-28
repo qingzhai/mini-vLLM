@@ -129,6 +129,8 @@
 
 #### 1. 这个项目与直接调用 vLLM 有什么区别？你具体做了什么？
 
+**复盘入口：** [架构：Tokenizer、Embedding 与请求调用链](MOCK_INTERVIEW_REVIEW.zh.md#mock01)。Prompt 先经 `tokenizer.encode()` 得到 Token IDs，模型前向内部的 Embedding 再把 ID 映射为向量；二者作用和执行顺序不同。
+
 **面试官问题：** 框架和模型都来自开源，你的工作在哪里？它是生产服务吗？
 
 **30 秒回答：** 我基于 MinivLLM 的模型、算子和引擎结构做系统扩展与验证，重点是完整前缀页管理、Chunk 调度、DFlash 接受与回滚、Target Graph，以及双卡对照。我的价值是能把请求、Token、KV 所有权和执行路径连起来，并用明确基线说明收益与代价。它是可复现的实验原型，没有生产 HTTP 服务，也没有宣称替代生产 vLLM。
@@ -144,6 +146,8 @@
 <a id="q02"></a>
 
 #### 2. Prefill 与 Decode 有什么区别？为什么 KV 可以复用？
+
+**复盘入口：** [Sequence 与 KV 元数据手推](MOCK_INTERVIEW_REVIEW.zh.md#mock02)：100 个 Prompt Token Prefill 后生成 A，此时 Sequence 长 101，有效 KV 长 100，下一轮输入 A。
 
 **面试官问题：** 首 Token 是哪一步得到的？每轮 Decode 是否重新算整个历史？
 
@@ -164,6 +168,8 @@
 <a id="q03"></a>
 
 #### 3. Paged KV Cache 如何寻址，究竟节省了什么？
+
+**跨页补充：** 页长 4，Prompt 长 8、生成 X 后 `len(seq)=9`，原页表 `[5,7]`，空闲队列 `[2,9]`；`can_append()` 为真，`append()` 取页 2，页表变 `[5,7,2]`，X 写入 slot `2×4+0=8`。[完整复盘](MOCK_INTERVIEW_REVIEW.zh.md#mock03)。
 
 **面试官问题：** 一条请求的 KV 不连续，你怎么知道新 Token 写在哪里、历史 Token 又从哪里读？分页能把 KV 本身变小吗？
 
@@ -213,6 +219,8 @@
 
 #### 6. Chunked Prefill 为什么前几个 Chunk 不能采样？
 
+**复盘入口：** [Chunk 预算与性能分析](MOCK_INTERVIEW_REVIEW.zh.md#mock08)。Chunk 决定窗口和混合调度，单独开启不会减少原 Prompt 所需计算量。
+
 **面试官问题：** Prompt 分成三块之后，每块最后位置都有 Logits，为什么不能都生成一个输出？返回的 `-1` 又是什么？
 
 **30 秒回答：** 前几个 Chunk 还没有处理完整用户输入，它们末尾对应的是 Prompt 中间位置，预测的是后面的输入，而不是完整 Prompt 后的答案。所以部分 Prefill 只写 KV、推进计算进度；最后一个 Chunk 才采样首个输出。代码返回的 `-1` 只是“不采样”哨兵，不是 PAD，也不会追加到请求的 Token 序列里。
@@ -244,6 +252,8 @@
 <a id="q08"></a>
 
 #### 8. ShareGPT 四组消融怎么设计，Prefix 的提升相对谁？
+
+**性能追问：** 先比较 Forward 次数、每步 Token、Mixed Steps、Token Budget 和 Prefix 命中，再分别测 CPU 元数据时间与 GPU Kernel 效率。没有 Profiling 时，调度开销只是候选解释。[第 8 题复盘](MOCK_INTERVIEW_REVIEW.zh.md#mock08)。
 
 **面试官问题：** 你是不是只跑了 Prefill？为什么要补 Prefix-only？20% 共享前缀是哪里来的？
 
@@ -341,6 +351,8 @@ Pending 在逻辑上没有已提交 KV；此前投机写入的同位置物理数
 
 #### 12. 怎样手推一轮 DFlash 验证？为什么只接受连续正确前缀？
 
+**复盘入口：** [B/Q、连续前缀与 Target/Draft 回滚](MOCK_INTERVIEW_REVIEW.zh.md#mock06)。
+
 **面试官问题：** Pending 为 P，候选 A、B、C，Target 后继预测 A、B、X、Y；最终输出和 KV 分别保留什么？
 
 **30 秒回答：**
@@ -375,6 +387,8 @@ Pending 在逻辑上没有已提交 KV；此前投机写入的同位置物理数
 <a id="q13"></a>
 
 #### 13. 拒绝候选后回滚什么？为什么不必立即清零整块 KV？
+
+**复盘入口：** [Graph 后的有效 KV 与两类 Cache 裁剪](MOCK_INTERVIEW_REVIEW.zh.md#mock06)。
 
 **面试官问题：** Target 已经计算错误候选并写入 KV，下一轮会不会读到错误状态？Target KV、Draft KV 和 Hidden Features 怎样分别处理？
 
@@ -427,6 +441,8 @@ Target KV 是大模型所有层的 K/V；Draft KV 是 Draft 自己的上下文�
 <a id="q15"></a>
 
 #### 15. 候选数、接受率和平均推进长度怎样影响速度？Confidence 为什么反而慢？
+
+**后续方向：** 借鉴 DeepInfer 思路，按多请求负载探索动态验证长度调度；本项目目前没有实现或实测这个策略。[DSpark 数据复盘](MOCK_INTERVIEW_REVIEW.zh.md#mock04)。
 
 **面试官问题：** 旧 DFlash 接受率约 31% 仍能加速，新 DSpark 接受率升到 83% 却更慢，为什么？
 
@@ -502,6 +518,8 @@ Capture 本身有成本：四张图共约 3.533 s、allocated 增量约 77.39 Mi
 
 #### 17. 序列长度一直变化，静态输入缓冲到底固定什么？
 
+**复盘入口：** [B=2、Q=16 与四类静态缓冲](MOCK_INTERVIEW_REVIEW.zh.md#mock06)。
+
 **面试官问题：** Graph 输入地址不变，是不是 Token、历史长度和页表也不能变？
 
 **30 秒回答：**
@@ -527,6 +545,8 @@ Capture 本身有成本：四张图共约 3.533 s、allocated 增量约 77.39 Mi
 <a id="q18"></a>
 
 #### 18. B/Q 四个 Graph 桶怎样选择？为什么返回值必须 clone？
+
+**复盘入口：** [Replay、输出所有权与回滚](MOCK_INTERVIEW_REVIEW.zh.md#mock06)。
 
 **面试官问题：** B、Q 分别是什么？Q=16 是补到 16 的 PAD 吗？保存上轮 Features 为什么会被下一轮覆盖？
 
@@ -647,6 +667,8 @@ fallback=0 的范围是这些正式 Target 验证前向。初始 Prefill 即使�
 
 #### 24. 单机 1P1D 怎样迁移 KV？首 Token 和 Pending Token 在哪里？
 
+**数据边界：** `pack()` 按源页表收集全层 Prompt KV，NCCL 传输的是该 KV Tensor；控制命令和页表等元数据通过控制路径管理，不是一起装进 KV Tensor。[迁移复盘](MOCK_INTERVIEW_REVIEW.zh.md#mock05)。
+
 **面试官问题：** D 会不会重新 Prefill？物理页号不同怎么办？P 何时能释放页？
 
 **30 秒回答：** GPU 0 的 P 完成 Prompt Prefill 并生成首 token；这个 token 已知，但它自己的 KV 还没算。P 把 Prompt 的全部 36 层 K/V 打包，经 NCCL 传给 GPU 1 的 D，D 按自己的页表写入，然后从首个待计算 token 开始 Decode，不重新算 Prompt。控制器收到发送端和接收端两份完成响应后才释放 P 页。这是同步 handoff，不是异步流水线，也不是 PP。
@@ -662,6 +684,8 @@ fallback=0 的范围是这些正式 Target 验证前向。初始 Prefill 即使�
 <a id="q25"></a>
 
 #### 25. TTFT、TPOT、ITL 怎样区分？1P1D 改善了什么？
+
+**复盘入口：** [DP2 与 1P1D 的最大 ITL / P99](MOCK_INTERVIEW_REVIEW.zh.md#mock05)。
 
 **面试官问题：** 你说最大 ITL 降了约九成，为什么 P99 没全面变好？是不是挑指标？
 
@@ -685,6 +709,8 @@ fallback=0 的范围是这些正式 Target 验证前向。初始 Prefill 即使�
 <a id="q26"></a>
 
 #### 26. AWQ 为什么叫 Activation-aware？W4A16 怎样执行，为何只有内存收益？
+
+**张量形状例子：** `K=256, N=64, group_size=128` 时，`qweight` 为 `[256,8]` INT32，`qzeros` 为 `[2,8]` INT32，`scales` 为 `[2,64]` FP16。一个 INT32 装 8 个输出通道的 INT4，输入维分 2 组。当前 `_gemm` 的 BM/BN/BK 为 16/64/32。先做算子正确性，再对 M=1/4/16/64 做 AWQ/FP16 GEMM Microbenchmark，最后用 Profiler/Nsight 检查 Kernel 与访存；这是未来方案，不是已取得的 Profiling 证据。[完整复盘](MOCK_INTERVIEW_REVIEW.zh.md#mock07)。
 
 **面试官问题：** 既然主要量化 Weight，Activation 起什么作用？你做了校准吗，INT4 怎样进入 GEMM？
 
@@ -752,6 +778,8 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 
 #### 29. 三轮中位数就可信吗？怎样复现，计时包含什么？
 
+**复盘入口：** [四组统计口径与性能排查](MOCK_INTERVIEW_REVIEW.zh.md#mock08)。
+
 **面试官问题：** 你怎样避免把首次编译、预热、缓存状态或机器波动当成优化收益？
 
 **30 秒回答：** 我固定输入、精度、工作量和资源，把加载、预热、捕获与诊断排除在计时外，保留每轮原始结果和源码。新 ShareGPT、Graph 和三方法各测三轮，旧 ShareGPT 和多卡各测一次。三轮能观察波动，仍不能替代更多负载、完整位置平衡和跨机器统计。
@@ -813,6 +841,8 @@ AR Graph 对 AR Eager 观察 Graph 在 AR 中的收益；DFlash Graph 对 DFlash
 <a id="q32"></a>
 
 #### 32. 哪些结论已经成立，哪些必须留给后续？
+
+**设计练习：** [双 A100 多请求系统参考答案](MOCK_INTERVIEW_REVIEW.zh.md#mock09)；尚未回答、没有原始评分。
 
 **面试官问题：** 如果要继续做，先做什么？为什么现在还不能作为生产系统部署？
 

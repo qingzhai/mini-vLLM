@@ -76,6 +76,14 @@ prompt → tokenizer → Sequence → waiting
 
 第一遍先读前两层，第二遍沿 S1 或 G1 的一条真实实验链展开，最后看 D1。运行时安装的 hook/替换会改变真正执行的函数，仅看模型类最初定义不够。
 
+## 模拟面试复盘：Graph、AWQ 与性能分析
+
+先在[九题复盘](MOCK_INTERVIEW_REVIEW.zh.md)独立作答，再按原有八步路线核对；第 9 题尚未作答，不设评分。
+
+- **Graph：** 先读 [Request/commit/trim](../experiments/dflash_graph/state.py) 手推 Pending 与有效 KV，再读 [build_query_metadata/_fill/capture_all/run](../experiments/dflash_graph/graph_executor.py)，画出 B=2、Q=16 的四类输入和输出 clone，最后对照[第 6 题](MOCK_INTERVIEW_REVIEW.zh.md#mock06)。
+- **AWQ：** 先根据 [AWQLinear.__init__](../experiments/awq/awq_linear.py) 手算三类张量形状，再读 `_gemm()` 的交错解包、分组反量化与 `tl.dot`；最后对照[第 7 题](MOCK_INTERVIEW_REVIEW.zh.md#mock07)的存储和速度。
+- **性能分析：** 先读 [S1 四组结果](../results/sharegpt/factorial-20261024/README.md)与 [paired_effects()](../experiments/sharegpt/factorial_protocol.py)，列出调度 Trace 和各轮吞吐；再设计 CPU/GPU 分段计时、GEMM Microbenchmark 与 Profiler。未执行的新测试只作为计划，见[第 8 题](MOCK_INTERVIEW_REVIEW.zh.md#mock08)。
+
 ## 八步阅读顺序
 
 最新四组调度消融在第 3 步学习，基础执行与实验适配的区别见下面的映射表。按函数建立状态链后，再看结果与面试表达。

@@ -24,7 +24,7 @@
 
 Fixed 吞吐中位数为 **63.225 tokens/s**，略高于 Markov Only 的 **63.180**；后者的配对加速比中位数却略高（3.898× 对 3.894×）。配对比值中位数与吞吐中位数是不同统计量，本轮两者输出和接受轨迹相同，微小差值不足以判定稳定优劣。
 
-快速导航：[文档入口](docs/README.zh.md) · [项目事实总览](docs/PROJECT_SUMMARY.zh.md) · [简历描述](docs/RESUME.zh.md) · [面试讲述与问答](docs/INTERVIEW.zh.md) · [原 DFlash＋Graph](results/dflash_graph/README.md) · [三方法与消融](results/speculative_compare/legacy-target-formal-20261021/README.md) · [原始数值诊断](results/speculative_compare/diagnostic-20261019/README.md)
+快速导航：[模拟面试九题复盘](docs/MOCK_INTERVIEW_REVIEW.zh.md) · [源码学习指南](docs/LEARNING_GUIDE.zh.md) · [文档入口](docs/README.zh.md) · [项目事实总览](docs/PROJECT_SUMMARY.zh.md) · [简历描述](docs/RESUME.zh.md) · [面试讲述与问答](docs/INTERVIEW.zh.md) · [原 DFlash＋Graph](results/dflash_graph/README.md) · [三方法与消融](results/speculative_compare/legacy-target-formal-20261021/README.md) · [原始数值诊断](results/speculative_compare/diagnostic-20261019/README.md)
 
 ## 从这里开始学习
 
